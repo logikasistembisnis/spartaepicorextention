@@ -26,6 +26,8 @@ export async function loginAction(
     return { error: "Konfigurasi server error (ENV missing)." };
   }
 
+  const isProd = process.env.NODE_ENV === "production";
+
   try {
     // Basic Auth token (base64 encoded username:password)
     const basicAuth = Buffer.from(`${username}:${password}`).toString("base64");
@@ -60,8 +62,8 @@ export async function loginAction(
 
       cookieStore.set("session_auth", authHeaderValue, {
         httpOnly: true, // JS browser gak bisa baca (aman dari XSS)
-        secure: process.env.NODE_ENV === "production", // Hanya HTTPS di production
-        sameSite: "strict", // Perlindungan CSRF
+        secure: false, // Hanya HTTPS di production
+        sameSite: "lax", // Perlindungan CSRF
         maxAge: 60 * 60 * 24, // Expire 1 hari
         path: "/",
       });
