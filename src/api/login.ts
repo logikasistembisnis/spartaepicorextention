@@ -62,8 +62,8 @@ export async function loginAction(
 
       cookieStore.set("session_auth", authHeaderValue, {
         httpOnly: true, // JS browser gak bisa baca (aman dari XSS)
-        secure: false, // Hanya HTTPS di production
-        sameSite: "lax", // Perlindungan CSRF
+        secure: false,
+        sameSite: "lax",
         maxAge: 60 * 60 * 24, // Expire 1 hari
         path: "/",
       });
