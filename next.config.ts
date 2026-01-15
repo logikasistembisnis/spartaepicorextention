@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    // domains: ["qrcode.tec-it.com"],
+  },
 };
 
 export default nextConfig;
