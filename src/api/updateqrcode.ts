@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 
-// Tipe data untuk Update (Wajib bawa SysRowID & SysRevID)
+// Tipe data untuk Update
 export type UpdateUD14Item = {
   Company: string;
   Key1: string;
@@ -12,8 +12,11 @@ export type UpdateUD14Item = {
   SysRevID: number;
   Character01?: string;
   Number01?: number;
+  Number02?: number;
   ShortChar20?: string;
   ShortChar01?: string;
+  ShortChar02?: string;
+  Date01: string;
 };
 
 export async function updateUD14(items: UpdateUD14Item[]) {

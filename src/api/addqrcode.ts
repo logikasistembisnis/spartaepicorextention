@@ -7,6 +7,8 @@ type SavePartItem = {
   partNumber: string;
   description: string;
   qtyBox: number;
+  qtyCetak: number;
+  lotNumber: string;
 };
 
 export async function saveToUD14(items: SavePartItem[]) {
@@ -53,6 +55,8 @@ export async function saveToUD14(items: SavePartItem[]) {
 
   const timestamp = `${yy}${MM}${dd}${HH}${mm}${ss}`;
 
+  const todayDate = now.toISOString().split("T")[0];
+
   const ud14Rows = items.map((item) => {
     // Unik Key1: PartNum + # + Timestamp
     const key1 = `${item.partNumber}#${timestamp}`;
@@ -67,6 +71,9 @@ export async function saveToUD14(items: SavePartItem[]) {
       Character01: item.description, // Deskripsi Part
       Number01: item.qtyBox, // Qty Box
       ShortChar20: username, // User ID dari Cookie
+      ShortChar02: item.lotNumber, // Simpan Lot Number
+      Number02: item.qtyCetak, // Simpan Qty Cetak
+      Date01: todayDate,
       RowMod: "A",
     };
   });
@@ -79,18 +86,15 @@ export async function saveToUD14(items: SavePartItem[]) {
 
   // Kirim ke API Epicor
   try {
-    const response = await fetch(
-      `${apiUrl}/v1/Ice.BO.UD14Svc/Update`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          Authorization: authSession,
-        },
-        body: JSON.stringify(payload),
-      }
-    );
+    const response = await fetch(`${apiUrl}/v1/Ice.BO.UD14Svc/Update`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        Authorization: authSession,
+      },
+      body: JSON.stringify(payload),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();

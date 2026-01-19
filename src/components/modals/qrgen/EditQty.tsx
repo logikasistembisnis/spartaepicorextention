@@ -10,7 +10,10 @@ type EditQtyProps = {
     partNumber: string
     currentQty: number
     setNewQty: (val: number) => void
+    currentQtyCetak: number
+    setNewQtyCetak: (val: number) => void
     isSaving: boolean
+    isPrinted: boolean
 }
 
 export default function EditQty({
@@ -20,7 +23,10 @@ export default function EditQty({
     partNumber,
     currentQty,
     setNewQty,
-    isSaving
+    currentQtyCetak,
+    setNewQtyCetak,
+    isSaving,
+    isPrinted
 }: EditQtyProps) {
 
     if (!isOpen) return null;
@@ -59,16 +65,37 @@ export default function EditQty({
 
                     <div>
                         <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
-                            Qty Box Baru
+                            Qty Box
+                        </label>
+                        <div className="relative">
+                            <input
+                                type="number"
+                                min="1"
+                                value={currentQty}
+                                onChange={(e) => setNewQty(Number(e.target.value))}
+                                className={`w-full px-4 py-2 rounded-lg border shadow-sm text-sm md:text-base 
+                                    ${isPrinted 
+                                        ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' 
+                                        : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-gray-900'
+                                    }`}
+                                disabled={isSaving || isPrinted}
+                                autoFocus={!isPrinted}
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
+                            Qty Cetak
                         </label>
                         <input
                             type="number"
                             min="1"
-                            value={currentQty}
-                            onChange={(e) => setNewQty(Number(e.target.value))}
+                            value={currentQtyCetak}
+                            onChange={(e) => setNewQtyCetak(Number(e.target.value))}
                             className="w-full px-4 py-2 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm md:text-base text-gray-900"
                             disabled={isSaving}
-                            autoFocus
+                            autoFocus={isPrinted}
                         />
                     </div>
                 </div>
@@ -78,14 +105,14 @@ export default function EditQty({
                     <button
                         onClick={onClose}
                         disabled={isSaving}
-                        className="px-3 py-1 md:px-4 py-2 text-xs md:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 disabled:opacity-50"
+                        className="px-3 md:px-4 py-2 text-xs md:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 disabled:opacity-50"
                     >
                         Batal
                     </button>
                     <button
                         onClick={onSave}
                         disabled={isSaving || currentQty <= 0}
-                        className="px-3 py-1 md:px-4 py-2 text-xs md:text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 flex items-center gap-2"
+                        className="px-3 md:px-4 py-2 text-xs md:text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 flex items-center gap-2"
                     >
                         {isSaving ? (
                             <>

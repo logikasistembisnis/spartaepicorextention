@@ -8,9 +8,12 @@ export type qrList = {
   UD14_Key2: string; // Part Number
   UD14_Character01: string; // Description
   UD14_Number01: number; // Qty
+  UD14_Number02: number;
   UD14_Key5: string;
   UD14_ShortChar01: string;
+  UD14_ShortChar02: string;
   UD14_ShortChar20: string;
+  UD14_Date01: string;
   UD14_SysRowID: string;
   UD14_SysRevID: number;
 };

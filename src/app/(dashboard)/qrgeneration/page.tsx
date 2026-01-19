@@ -15,12 +15,28 @@ type PartItem = {
     id: string
     partNumber: string
     description: string
+    lotNumber: string
     qtyBox: number
+    qtyCetak: number
     key5: string
     sysRowId: string
     sysRevId: number
     timePrint: string
     entryPerson: string
+    entryDate: string
+}
+
+// Helper: Generate Random UUID
+const generateUUID = () => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID(); // Modern browser
+    }
+    // Fallback untuk browser lama
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
 }
 
 // Helper: Generate Timestamp yymmddHHmmss
@@ -45,6 +61,7 @@ export default function QrGeneration() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [editingItem, setEditingItem] = useState<PartItem | null>(null)
     const [newQty, setNewQty] = useState<number>(0)
+    const [newQtyCetak, setNewQtyCetak] = useState<number>(0)
     const [isSavingEdit, setIsSavingEdit] = useState(false)
 
     const fetchQRData = useCallback(async () => {
@@ -61,12 +78,15 @@ export default function QrGeneration() {
                     id: item.UD14_Key1,
                     partNumber: item.UD14_Key2,
                     description: item.UD14_Character01,
+                    lotNumber: item.UD14_ShortChar02,
                     qtyBox: item.UD14_Number01,
+                    qtyCetak: item.UD14_Number02,
                     key5: item.UD14_Key5,
                     sysRowId: item.UD14_SysRowID,
                     sysRevId: item.UD14_SysRevID,
                     timePrint: item.UD14_ShortChar01,
-                    entryPerson: item.UD14_ShortChar20
+                    entryPerson: item.UD14_ShortChar20,
+                    entryDate: item.UD14_Date01
                 }))
 
                 setItems(mappedData)
@@ -127,32 +147,45 @@ export default function QrGeneration() {
             const selectedItems = items.filter(item => selectedIds.has(item.id));
 
             // GENERATE GAMBAR QR CODE
-            const itemsToPrint: QrPdfItem[] = await Promise.all(
+            const itemsToPrintNested = await Promise.all(
                 selectedItems.map(async (item) => {
-                    // Format data raw: partnumber#partdesc#qtybox#sysrowid
-                    const rawData = `${item.partNumber}#${item.description}#${item.qtyBox}#${item.sysRowId}`;
+                    // Tentukan jumlah loop berdasarkan Qty Cetak
+                    const printCount = item.qtyCetak && item.qtyCetak > 0 ? item.qtyCetak : 1;
 
-                    // Buat Gambar Base64
-                    const qrBase64 = await QRCode.toDataURL(rawData, {
-                        errorCorrectionLevel: 'M',
-                        margin: 1,
-                        width: 300, // Resolusi gambar
-                        color: {
-                            dark: '#000000',
-                            light: '#ffffff'
-                        }
-                    });
+                    const generatedBatch = await Promise.all(
+                        Array.from({ length: printCount }).map(async (_, index) => {
 
-                    // Return data yang sudah ada gambarnya
-                    return {
-                        partNumber: item.partNumber,
-                        description: item.description,
-                        qtyBox: item.qtyBox,
-                        sysRowId: item.sysRowId,
-                        qrImageSrc: qrBase64
-                    };
+                            // GENERATE ID UNIK
+                            const uniqueQRId = generateUUID();
+
+                            // Format: partnumber#partdesc#lotnumber#qtybox#UNIQUE_ID
+                            const rawData = `${item.partNumber}#${item.description}#${item.lotNumber}#${item.qtyBox}#${uniqueQRId}`;
+
+                            // Buat Gambar Base64
+                            const qrBase64 = await QRCode.toDataURL(rawData, {
+                                errorCorrectionLevel: 'M',
+                                margin: 1,
+                                width: 300,
+                                color: { dark: '#000000', light: '#ffffff' }
+                            });
+
+                            return {
+                                partNumber: item.partNumber,
+                                description: item.description,
+                                lotNumber: item.lotNumber,
+                                qtyBox: item.qtyBox,
+                                qtyCetak: item.qtyCetak,
+                                sysRowId: uniqueQRId,
+                                qrImageSrc: qrBase64
+                            };
+                        })
+                    );
+
+                    return generatedBatch;
                 })
             );
+
+            const itemsToPrint: QrPdfItem[] = itemsToPrintNested.flat();
 
             // Generate PDF Blob dengan data yang sudah ada gambarnya
             const blob = await pdf(<QrPdfDocument items={itemsToPrint} />).toBlob();
@@ -171,16 +204,19 @@ export default function QrGeneration() {
                 Key5: item.key5,
                 SysRowID: item.sysRowId,
                 SysRevID: item.sysRevId,
-                ShortChar01: timestamp,
+                ShortChar01: item.timePrint ? item.timePrint : timestamp,
+                ShortChar02: item.lotNumber,
                 Character01: item.description,
                 Number01: item.qtyBox,
-                ShortChar20: item.entryPerson
+                Number02: item.qtyCetak,
+                ShortChar20: item.entryPerson,
+                Date01: item.entryDate
             }));
 
             const updateResult = await updateUD14(updatePayload);
 
             if (updateResult.success) {
-                // Refresh data agar UI terupdate (Icon Pencil hilang)
+                // Refresh data
                 await fetchQRData();
             } else {
                 alert(`PDF tercetak, tapi gagal update status di server: ${updateResult.message}`);
@@ -195,13 +231,9 @@ export default function QrGeneration() {
     };
 
     const handleEditClick = (item: PartItem) => {
-        // Double check protection
-        if (item.timePrint) {
-            alert("Data sudah dicetak, tidak bisa diedit.");
-            return;
-        }
         setEditingItem(item);
         setNewQty(item.qtyBox);
+        setNewQtyCetak(item.qtyCetak);
         setIsEditModalOpen(true);
     };
 
@@ -219,7 +251,11 @@ export default function QrGeneration() {
                 SysRevID: editingItem.sysRevId,
                 Number01: newQty,
                 Character01: editingItem.description,
-                ShortChar20: editingItem.entryPerson
+                ShortChar20: editingItem.entryPerson,
+                ShortChar02: editingItem.lotNumber,
+                ShortChar01: editingItem.timePrint,
+                Number02: newQtyCetak,
+                Date01: editingItem.entryDate
             }];
 
             const result = await updateUD14(payload);
@@ -329,7 +365,9 @@ export default function QrGeneration() {
                                 <th className="px-4 md:px-6 py-2 md:py-4 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider">No</th>
                                 <th className="px-4 md:px-6 py-2 md:py-4 text-left text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider">Part Number</th>
                                 <th className="px-4 md:px-6 py-2 md:py-4 text-left text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider">Description</th>
+                                <th className="px-4 md:px-6 py-2 md:py-4 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider">Lot Number</th>
                                 <th className="px-4 md:px-6 py-2 md:py-4 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider">Qty Box</th>
+                                <th className="px-4 md:px-6 py-2 md:py-4 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider">Qty Cetak</th>
                                 <th className="px-4 md:px-6 py-2 md:py-4 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider">Action</th>
                             </tr>
                         </thead>
@@ -355,25 +393,19 @@ export default function QrGeneration() {
                                             <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900 text-center">{index + 1}</td>
                                             <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900">{item.partNumber}</td>
                                             <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900">{item.description}</td>
+                                            <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900 text-center">{item.lotNumber}</td>
                                             <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900 text-center">{item.qtyBox}</td>
+                                            <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900 text-center">{item.qtyCetak}</td>
                                             <td className="px-4 md:px-6 py-2 whitespace-nowrap text-center">
                                                 <div className="flex items-center justify-center gap-2">
                                                     {/* TOMBOL EDIT */}
-                                                    {isPrinted ? (
-                                                        // Jika sudah print: Icon Disabled / Gembok
-                                                        <button disabled className="text-gray-300 cursor-not-allowed p-2">
-                                                            <PencilSquareIcon className="h-5 w-5" />
-                                                        </button>
-                                                    ) : (
-                                                        // Jika belum print: Icon Pencil Aktif
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); handleEditClick(item); }}
-                                                            className="text-blue-500 hover:text-blue-700 p-2 rounded-full hover:bg-blue-50"
-                                                            title="Edit Qty"
-                                                        >
-                                                            <PencilSquareIcon className="h-5 w-5" />
-                                                        </button>
-                                                    )}
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleEditClick(item); }}
+                                                        className="text-blue-500 hover:text-blue-700 p-2 rounded-full hover:bg-blue-50"
+                                                        title="Edit Qty"
+                                                    >
+                                                        <PencilSquareIcon className="h-5 w-5" />
+                                                    </button>
 
                                                     {/* TOMBOL DELETE */}
                                                     <button onClick={(e) => { e.stopPropagation(); handleDelete(item); }} className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50">
@@ -386,7 +418,7 @@ export default function QrGeneration() {
                                 })
                             ) : !loading ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-12 text-center text-gray-400">Data Kosong</td>
+                                    <td colSpan={8} className="px-6 py-12 text-center text-gray-400">Data Kosong</td>
                                 </tr>
                             ) : null}
                         </tbody>
@@ -410,7 +442,10 @@ export default function QrGeneration() {
                 partNumber={editingItem?.partNumber || ''}
                 currentQty={newQty}
                 setNewQty={setNewQty}
+                currentQtyCetak={newQtyCetak}
+                setNewQtyCetak={setNewQtyCetak}
                 isSaving={isSavingEdit}
+                isPrinted={!!editingItem?.timePrint}
             />
         </div>
     )
