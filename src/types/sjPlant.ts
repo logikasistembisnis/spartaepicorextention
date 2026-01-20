@@ -22,3 +22,30 @@ export type SjPlantLine = {
   qty: number;
   uom: string;
 }
+
+export interface UD100RawData {
+  Company: string;
+  Key1: string;
+  Key2: string;
+  Key3: string;
+  Key4: string;
+  Key5: string;
+  ShortChar01: string; // ShipFrom
+  ShortChar02: string; // ShipTo
+  ShortChar06: string; // Status
+  ShortChar10: string; // Username
+  Date01: string | null; // ActualShipDate
+  Date02: string | null; // ShipDate
+  Date20: string | null; // CreatedDate
+  CheckBox01: boolean; // IsShipped
+  CheckBox05: boolean; // IsTgp
+  Character01: string; // Comment
+  Number20: number; // Counter
+  SysRowID: string;
+  SysRevID: number;
+  BitFlag: number;
+  RowMod: string;
+  // Index signature untuk menangani properti Epicor lain (Character02, Number05, dll)
+  // agar spread operator (...) tidak error
+  [key: string]: string | number | boolean | null | undefined;
+}

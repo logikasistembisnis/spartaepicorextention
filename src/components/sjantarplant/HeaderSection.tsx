@@ -129,7 +129,7 @@ export default function HeaderSection({ data, plantList, onChange, isReadOnly = 
                 {/* KOLOM KANAN (Options & Status) */}
                 <div className="space-y-6">
 
-                    <div className="bg-white px-5">
+                    <div className="bg-white">
                         <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wider pb-3">Options</h4>
                         {/* Shipped Checkbox */}
                         <div className="flex items-center gap-3 mb-4">

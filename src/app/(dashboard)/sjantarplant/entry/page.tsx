@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import HeaderSection from '@/components/sjantarplant/HeaderSection'
 import LinesSection from '@/components/sjantarplant/LinesSection'
-import { SjPlantHeader, SjPlantLine } from '@/types/sjPlant'
+import { SjPlantHeader, SjPlantLine, UD100RawData } from '@/types/sjPlant'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { getPlantsList, ApiShip } from '@/api/sjplant/ship'
 import { saveHeaderToUD100 } from '@/api/sjplant/addheader'
 import { getHeaderById } from '@/api/sjplant/getbyid'
+import { updateHeaderToUD100 } from '@/api/sjplant/update'
 
 export default function SJAntarPlantEntry() {
     const router = useRouter()
@@ -33,6 +34,8 @@ export default function SJAntarPlantEntry() {
         company: '166075',
     })
 
+    const [rawData, setRawData] = useState<UD100RawData | null>(null);
+
     // Load Plant List
     useEffect(() => {
         const fetchPlants = async () => {
@@ -54,6 +57,9 @@ export default function SJAntarPlantEntry() {
 
                 if (result.success && result.data) {
                     setHeaderData(result.data);
+                    if (result.rawData) {
+                        setRawData(result.rawData);
+                    }
                 } else {
                     alert(result.message || "Gagal mengambil data header.");
                     router.push('/sjantarplant'); // Redirect balik jika error
@@ -83,45 +89,56 @@ export default function SJAntarPlantEntry() {
 
         setIsSaving(true);
         try {
-            // 2. Panggil Server Action
-            const result = await saveHeaderToUD100(headerData);
+            const isEditMode = !!packNumParam && !!rawData;
 
-            if (result.success) {
-                const responseData = result.data;
-
-                // Cek 1: Ada di returnObj?
-                let newRecord = responseData?.returnObj?.UD100?.[0];
-
-                // Cek 2: Ada di parameters? (Kadang update method taruh disini)
-                if (!newRecord) {
-                    newRecord = responseData?.parameters?.ds?.UD100?.[0];
+            if (isEditMode) {
+                if (!rawData) {
+                    alert("Data asli hilang, silakan refresh halaman.");
+                    return;
                 }
 
-                // Cek 3: Ada langsung di root 'ds'?
-                if (!newRecord) {
-                    newRecord = responseData?.ds?.UD100?.[0];
-                }
+                // Panggil API Update
+                const result = await updateHeaderToUD100(headerData, rawData);
 
-                // Cek 4: Ada langsung di root 'UD100'? (Standard OData)
-                if (!newRecord) {
-                    newRecord = responseData?.UD100?.[0];
-                }
-
-                if (newRecord && newRecord.Key1) {
-                    // Update tampilan dengan nomor yang didapat
-                    setHeaderData(prev => ({ ...prev, packNum: newRecord.Key1 }));
-                    alert(`Berhasil dibuat! Nomor SJ: ${newRecord.Key1}`);
-                    router.replace(`/sjantarplant/entry?id=${newRecord.Key1}`);
+                if (result.success) {
+                    alert("Data berhasil diperbarui!");
+                    // Refresh halaman agar mendapatkan SysRevID terbaru
+                    window.location.reload();
                 } else {
-                    console.warn("Data tersimpan tapi response structure tidak dikenali:", responseData);
-                    alert("Berhasil disimpan (namun gagal membaca Nomor SJ dari response). Silakan refresh list.");
+                    alert("Gagal Update: " + (result.message || "Kesalahan tidak diketahui"));
                 }
+
             } else {
-                // Jika success: false
-                alert("Gagal: " + (result.message || "Terjadi kesalahan yang tidak diketahui."));
+
+                const result = await saveHeaderToUD100(headerData);
+
+                if (result.success) {
+                    const responseData = result.data;
+
+                    // Logic mencari ID baru dari response Epicor yang strukturnya dinamis
+                    const newRecord = responseData?.returnObj?.UD100?.[0] ||
+                        responseData?.parameters?.ds?.UD100?.[0] ||
+                        responseData?.ds?.UD100?.[0] ||
+                        responseData?.UD100?.[0];
+
+                    if (newRecord && newRecord.Key1) {
+                        // Update UI & URL
+                        setHeaderData(prev => ({ ...prev, packNum: newRecord.Key1 }));
+                        alert(`Berhasil dibuat! Nomor SJ: ${newRecord.Key1}`);
+
+                        // Pindah ke mode edit
+                        router.replace(`/sjantarplant/entry?id=${newRecord.Key1}`);
+                    } else {
+                        alert("Berhasil disimpan, namun gagal membaca Nomor SJ. Silakan cek list.");
+                        router.push('/sjantarplant');
+                    }
+                } else {
+                    alert("Gagal Simpan: " + (result.message || "Kesalahan tidak diketahui"));
+                }
             }
+
         } catch (error) {
-            console.error(error);
+            console.error("Save Error:", error);
             alert("Terjadi kesalahan sistem client saat menyimpan.");
         } finally {
             setIsSaving(false);

@@ -1,9 +1,16 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { SjPlantHeader } from "@/types/sjPlant";
+import { SjPlantHeader, UD100RawData } from "@/types/sjPlant";
 
-export async function getHeaderById(packNum: string) {
+type GetHeaderResult = {
+    success: boolean;
+    message?: string;
+    data?: SjPlantHeader;
+    rawData?: UD100RawData;
+}
+
+export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     const apiKey = process.env.API_KEY;
 
@@ -52,7 +59,7 @@ export async function getHeaderById(packNum: string) {
             return { success: false, message: "Data tidak ditemukan." };
         }
 
-        const raw = result.returnObj.UD100[0];
+        const raw = result.returnObj.UD100[0] as UD100RawData;
 
         // --- MAPPING DATA ---
         const headerData: SjPlantHeader = {
@@ -73,7 +80,7 @@ export async function getHeaderById(packNum: string) {
             rowMod: "U",
         };
 
-        return { success: true, data: headerData };
+        return { success: true, data: headerData, rawData: raw };
     } catch (error) {
         console.error("Get Header Error:", error);
         return { success: false, message: "Terjadi kesalahan server." };
