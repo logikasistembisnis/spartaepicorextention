@@ -1,18 +1,22 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import HeaderSection from '@/components/sjantarplant/HeaderSection'
-import LinesSection from '@/components/sjantarplant/LinesSection' 
+import LinesSection from '@/components/sjantarplant/LinesSection'
 import { SjPlantHeader, SjPlantLine } from '@/types/sjPlant'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { getPlantsList, ApiShip } from '@/api/sjplant/ship'
 import { saveHeaderToUD100 } from '@/api/sjplant/addheader'
+import { getHeaderById } from '@/api/sjplant/getbyid'
 
 export default function SJAntarPlantEntry() {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const packNumParam = searchParams.get('id')
     const [isSaving, setIsSaving] = useState(false);
+    const [isLoadingData, setIsLoadingData] = useState(false);
     const [plantList, setPlantList] = useState<ApiShip[]>([]);
 
     // State Header
@@ -40,6 +44,31 @@ export default function SJAntarPlantEntry() {
         fetchPlants();
     }, []);
 
+    useEffect(() => {
+        const fetchHeaderData = async () => {
+            if (!packNumParam) return; // Jika Add New, skip
+
+            setIsLoadingData(true);
+            try {
+                const result = await getHeaderById(packNumParam);
+
+                if (result.success && result.data) {
+                    setHeaderData(result.data);
+                } else {
+                    alert(result.message || "Gagal mengambil data header.");
+                    router.push('/sjantarplant'); // Redirect balik jika error
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Terjadi kesalahan saat memuat data.");
+            } finally {
+                setIsLoadingData(false);
+            }
+        }
+
+        fetchHeaderData();
+    }, [packNumParam, router]);
+
     const handleHeaderChange = (field: keyof SjPlantHeader, value: string | boolean | number) => {
         setHeaderData(prev => ({ ...prev, [field]: value }))
     }
@@ -59,15 +88,15 @@ export default function SJAntarPlantEntry() {
 
             if (result.success) {
                 const responseData = result.data;
-                
+
                 // Cek 1: Ada di returnObj?
                 let newRecord = responseData?.returnObj?.UD100?.[0];
-                
+
                 // Cek 2: Ada di parameters? (Kadang update method taruh disini)
                 if (!newRecord) {
                     newRecord = responseData?.parameters?.ds?.UD100?.[0];
                 }
-                
+
                 // Cek 3: Ada langsung di root 'ds'?
                 if (!newRecord) {
                     newRecord = responseData?.ds?.UD100?.[0];
@@ -82,7 +111,7 @@ export default function SJAntarPlantEntry() {
                     // Update tampilan dengan nomor yang didapat
                     setHeaderData(prev => ({ ...prev, packNum: newRecord.Key1 }));
                     alert(`Berhasil dibuat! Nomor SJ: ${newRecord.Key1}`);
-                    // Optional: Redirect atau refresh
+                    router.replace(`/sjantarplant/entry?id=${newRecord.Key1}`);
                 } else {
                     console.warn("Data tersimpan tapi response structure tidak dikenali:", responseData);
                     alert("Berhasil disimpan (namun gagal membaca Nomor SJ dari response). Silakan refresh list.");
@@ -98,6 +127,11 @@ export default function SJAntarPlantEntry() {
             setIsSaving(false);
         }
     }
+
+    // Logic untuk menentukan apakah mode Edit atau Add
+    const isEditMode = !!packNumParam;
+    // Logic: Lines section aktif jika sudah tersimpan (Edit Mode) atau Header punya PackNum
+    const isLinesActive = isEditMode || !!headerData.packNum;
 
     return (
         <div className="mx-auto pb-20">
@@ -137,10 +171,16 @@ export default function SJAntarPlantEntry() {
             </div>
 
             {/* Lines Section */}
-            <div className="px-4 mt-4 opacity-50 pointer-events-none grayscale">
-                <div className="p-4 bg-gray-100 rounded border border-gray-300 text-center text-gray-500">
-                    Simpan Header terlebih dahulu untuk menambah barang (Lines).
-                </div>
+            <div className={`px-4 mt-4 transition-all duration-300 ${isLinesActive ? '' : 'opacity-50 pointer-events-none grayscale'}`}>
+                {isLinesActive ? (
+                    <div className="p-4 bg-white rounded border border-gray-200">
+                        {/* <LinesSection headerId={headerData.packNum} /> */}
+                    </div>
+                ) : (
+                    <div className="p-4 bg-gray-100 rounded border border-gray-300 text-center text-gray-500">
+                        Simpan Header terlebih dahulu untuk menambah barang (Lines).
+                    </div>
+                )}
             </div>
         </div>
     )

@@ -26,7 +26,7 @@ export async function getHeaderById(packNum: string) {
         const queryUrl = `${apiUrl}/v1/Ice.BO.UD100Svc/GetByID?${queryParams.toString()}`;
 
         const response = await fetch(queryUrl, {
-            method: "GET", // Sesuai request
+            method: "GET",
             headers: {
                 "Content-Type": "application/json",
                 "x-api-key": apiKey,
@@ -70,7 +70,7 @@ export async function getHeaderById(packNum: string) {
             sysRowID: raw.SysRowID,
             sysRevID: raw.SysRevID,
             bitFlag: raw.BitFlag,
-            rowMod: "",
+            rowMod: "U",
         };
 
         return { success: true, data: headerData };
