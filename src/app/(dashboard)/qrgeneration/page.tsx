@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { TrashIcon, PlusIcon, PrinterIcon, ArrowPathIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { TrashIcon, PlusIcon, PrinterIcon, ArrowPathIcon, PencilSquareIcon, CalendarDaysIcon } from '@heroicons/react/24/outline'
 import AddNew from '@/components/modals/qrgen/AddNew'
-import { getGeneratedQRList, qrList, deleteQRItem } from '@/api/qrlist'
-import { updateUD14, UpdateUD14Item } from '@/api/updateqrcode'
+import { getGeneratedQRList, qrList, deleteQRItem } from '@/api/qr/qrlist'
+import { updateUD14, UpdateUD14Item } from '@/api/qr/updateqrcode'
 import QRCode from 'qrcode';
 import { pdf } from '@react-pdf/renderer'
 import { QrPdfDocument, QrPdfItem } from '@/components/pdf/QrPdfDocument'
@@ -51,7 +51,18 @@ const generateTimestamp = () => {
     return `${yy}${MM}${dd}${HH}${mm}${ss}`;
 }
 
+// Helper: Get Date String YYYY-MM-DD
+const getFormattedDate = (date: Date) => {
+    return date.toISOString().split('T')[0];
+}
+
 export default function QrGeneration() {
+    const [dateTo, setDateTo] = useState(() => getFormattedDate(new Date()));
+    const [dateFrom, setDateFrom] = useState(() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 3);
+        return getFormattedDate(d);
+    });
     const [items, setItems] = useState<PartItem[]>([])
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -73,21 +84,28 @@ export default function QrGeneration() {
             const res = await getGeneratedQRList()
 
             if (res.success && res.data) {
-                const mappedData: PartItem[] = res.data.map((item: qrList) => ({
-                    company: item.UD14_Company,
-                    id: item.UD14_Key1,
-                    partNumber: item.UD14_Key2,
-                    description: item.UD14_Character01,
-                    lotNumber: item.UD14_ShortChar02,
-                    qtyBox: item.UD14_Number01,
-                    qtyCetak: item.UD14_Number02,
-                    key5: item.UD14_Key5,
-                    sysRowId: item.UD14_SysRowID,
-                    sysRevId: item.UD14_SysRevID,
-                    timePrint: item.UD14_ShortChar01,
-                    entryPerson: item.UD14_ShortChar20,
-                    entryDate: item.UD14_Date01
-                }))
+                const mappedData: PartItem[] = res.data.map((item: qrList) => {
+                    let fixedDate = '';
+                    if (item.UD14_Date01 && typeof item.UD14_Date01 === 'string') {
+                        fixedDate = item.UD14_Date01.split('T')[0];
+                    }
+
+                    return {
+                        company: item.UD14_Company,
+                        id: item.UD14_Key1,
+                        partNumber: item.UD14_Key2,
+                        description: item.UD14_Character01,
+                        lotNumber: item.UD14_ShortChar02,
+                        qtyBox: item.UD14_Number01,
+                        qtyCetak: item.UD14_Number02,
+                        key5: item.UD14_Key5,
+                        sysRowId: item.UD14_SysRowID,
+                        sysRevId: item.UD14_SysRevID,
+                        timePrint: item.UD14_ShortChar01,
+                        entryPerson: item.UD14_ShortChar20,
+                        entryDate: fixedDate
+                    }
+                })
 
                 setItems(mappedData)
             } else {
@@ -107,6 +125,13 @@ export default function QrGeneration() {
     useEffect(() => {
         fetchQRData()
     }, [fetchQRData])
+
+    const filteredItems = useMemo(() => {
+        return items.filter(item => {
+            if (!item.entryDate) return false;
+            return item.entryDate >= dateFrom && item.entryDate <= dateTo;
+        });
+    }, [items, dateFrom, dateTo]);
 
     // CheckBox
     // Select All
@@ -146,11 +171,32 @@ export default function QrGeneration() {
             // Ambil item yang diceklis
             const selectedItems = items.filter(item => selectedIds.has(item.id));
 
+            const updatePayload: UpdateUD14Item[] = [];
+
             // GENERATE GAMBAR QR CODE
             const itemsToPrintNested = await Promise.all(
                 selectedItems.map(async (item) => {
                     // Tentukan jumlah loop berdasarkan Qty Cetak
                     const printCount = item.qtyCetak && item.qtyCetak > 0 ? item.qtyCetak : 1;
+
+                    // Update Time Print
+                    const timestamp = generateTimestamp();
+
+                    const updatePayload: UpdateUD14Item[] = selectedItems.map(item => ({
+                        Company: item.company,
+                        Key1: item.id,
+                        Key2: item.partNumber,
+                        Key5: item.key5,
+                        SysRowID: item.sysRowId,
+                        SysRevID: item.sysRevId,
+                        ShortChar01: item.timePrint ? item.timePrint : timestamp,
+                        ShortChar02: item.lotNumber,
+                        Character01: item.description,
+                        Number01: item.qtyBox,
+                        Number02: item.qtyCetak,
+                        ShortChar20: item.entryPerson,
+                        Date01: item.entryDate
+                    }));
 
                     const generatedBatch = await Promise.all(
                         Array.from({ length: printCount }).map(async (_, index) => {
@@ -159,7 +205,7 @@ export default function QrGeneration() {
                             const uniqueQRId = generateUUID();
 
                             // Format: partnumber#partdesc#lotnumber#qtybox#UNIQUE_ID
-                            const rawData = `${item.partNumber}#${item.description}#${item.lotNumber}#${item.qtyBox}#${uniqueQRId}`;
+                            const rawData = `${item.partNumber}#${item.description}#${item.lotNumber}#${item.qtyBox}#${uniqueQRId}#${item.timePrint ? item.timePrint : timestamp}`;
 
                             // Buat Gambar Base64
                             const qrBase64 = await QRCode.toDataURL(rawData, {
@@ -193,25 +239,6 @@ export default function QrGeneration() {
             // Buka di Tab Baru
             const url = URL.createObjectURL(blob);
             window.open(url, '_blank');
-
-            // Update Time Print
-            const timestamp = generateTimestamp();
-
-            const updatePayload: UpdateUD14Item[] = selectedItems.map(item => ({
-                Company: item.company,
-                Key1: item.id,
-                Key2: item.partNumber,
-                Key5: item.key5,
-                SysRowID: item.sysRowId,
-                SysRevID: item.sysRevId,
-                ShortChar01: item.timePrint ? item.timePrint : timestamp,
-                ShortChar02: item.lotNumber,
-                Character01: item.description,
-                Number01: item.qtyBox,
-                Number02: item.qtyCetak,
-                ShortChar20: item.entryPerson,
-                Date01: item.entryDate
-            }));
 
             const updateResult = await updateUD14(updatePayload);
 
@@ -310,32 +337,50 @@ export default function QrGeneration() {
     return (
         <div className="space-y-6">
             {/* Header Page */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col justify-between gap-4">
                 <div>
                     <h2 className="text-xl md:text-2xl font-bold text-gray-800">Generated QR Code</h2>
                 </div>
-                <div className="flex gap-2">
-                    <button
-                        onClick={handlePrint}
-                        disabled={isPrinting || selectedIds.size === 0}
-                        className={`flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-all
+                <div className="flex flex-row justify-between">
+                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg w-full sm:w-auto">
+                        <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
+                        <input
+                            type="date"
+                            value={dateFrom}
+                            onChange={(e) => setDateFrom(e.target.value)}
+                            className="bg-transparent text-sm text-gray-700 focus:outline-none border-none p-0 w-28 md:w-auto cursor-pointer"
+                        />
+                        <span className="text-gray-400 text-sm">-</span>
+                        <input
+                            type="date"
+                            value={dateTo}
+                            onChange={(e) => setDateTo(e.target.value)}
+                            className="bg-transparent text-sm text-gray-700 focus:outline-none border-none p-0 w-28 md:w-auto cursor-pointer"
+                        />
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handlePrint}
+                            disabled={isPrinting || selectedIds.size === 0}
+                            className={`flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-all
                             ${(isPrinting || selectedIds.size === 0) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}
                         `}
-                    >
-                        {isPrinting ? (
-                            <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                        ) : (
-                            <PrinterIcon className="h-5 w-5" />
-                        )}
-                        {isPrinting ? 'Printing...' : 'Print'}
-                    </button>
-                    <button
-                        onClick={() => setIsModalOpen(true)}
-                        className="flex items-center justify-center gap-1 md:gap-2 bg-orange-600 hover:bg-orange-700 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-colors shadow-sm"
-                    >
-                        <PlusIcon className="h-4 md:h-5 w-5 text-white" />
-                        Add New
-                    </button>
+                        >
+                            {isPrinting ? (
+                                <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                            ) : (
+                                <PrinterIcon className="h-5 w-5" />
+                            )}
+                            {isPrinting ? 'Printing...' : 'Print'}
+                        </button>
+                        <button
+                            onClick={() => setIsModalOpen(true)}
+                            className="flex items-center justify-center gap-1 md:gap-2 bg-orange-600 hover:bg-orange-700 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-colors shadow-sm"
+                        >
+                            <PlusIcon className="h-4 md:h-5 w-5 text-white" />
+                            Add New
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -372,8 +417,8 @@ export default function QrGeneration() {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {!loading && items.length > 0 ? (
-                                items.map((item, index) => {
+                            {!loading && filteredItems.length > 0 ? (
+                                filteredItems.map((item, index) => {
                                     const isSelected = selectedIds.has(item.id);
                                     const isPrinted = !!item.timePrint;
                                     return (

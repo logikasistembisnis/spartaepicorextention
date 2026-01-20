@@ -121,8 +121,6 @@ export async function deleteQRItem(
   }
 
   try {
-    // 3. Payload untuk DeleteByID harus Object JSON, bukan string OData
-    // Nama key (key1, key2, dst) harus match dengan parameter method Epicor
     const payload = {
         key1: key1,
         key2: key2,
@@ -131,8 +129,6 @@ export async function deleteQRItem(
         key5: key5
     };
 
-    // 4. Panggil Endpoint DeleteByID
-    // Penting: Method biasanya POST untuk RPC call di Epicor REST v1
     const response = await fetch(`${apiUrl}/v1/Ice.BO.UD14Svc/DeleteByID`, {
       method: 'POST', 
       headers: {

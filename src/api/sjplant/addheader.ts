@@ -1,0 +1,168 @@
+"use server";
+
+import { cookies } from "next/headers";
+import { SjPlantHeader } from "@/types/sjPlant";
+
+// --- 1. DEFINISI PAYLOAD ---
+interface UD100Payload {
+    Company: string;
+    Key1: string;
+    Key2: string;
+    Key3: string;
+    Key4: string;
+    Key5: string;
+    ShortChar01: string;
+    ShortChar02: string;
+    ShortChar06: string;
+    ShortChar10: string;
+    Date01: string | null;
+    Date02: string | null;
+    Date20: string | null;
+    CheckBox01: boolean;
+    CheckBox05: boolean;
+    Character01: string;
+    Number20: number;
+    RowMod: "A";
+}
+
+// --- 2. FUNGSI AMBIL NOMOR TERAKHIR (BAQ) ---
+async function getLastNumber(apiUrl: string, apiKey: string, authSession: string) {
+    try {
+        const baqId = "UDNEL_SJPlantNum";
+        const queryUrl = `${apiUrl}/v2/odata/166075/BaqSvc/${baqId}/Data?$top=1`;
+
+        const response = await fetch(queryUrl, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "x-api-key": apiKey,
+                Authorization: authSession,
+                "Cache-Control": "no-cache, no-store",
+            },
+            cache: "no-store",
+        });
+
+        if (!response.ok) return 0;
+
+        const result = await response.json();
+        if (result.value && result.value.length > 0) {
+            const lastRecord = result.value[0];
+            return Math.floor(Number(lastRecord.UD100_Number20 || 0));
+        }
+        return 0;
+    } catch (error) {
+        console.error(">> [BAQ] Error:", error);
+        return 0;
+    }
+}
+
+function formatKey(numberVal: number): string {
+    const now = new Date();
+    const yy = now.getFullYear().toString().slice(-2);
+    const MM = (now.getMonth() + 1).toString().padStart(2, "0");
+    const yyMM = `${yy}${MM}`;
+    return `${yyMM}${numberVal.toString().padStart(4, "0")}`;
+}
+
+// --- 3. FUNGSI UTAMA SAVE ---
+export async function saveHeaderToUD100(header: SjPlantHeader) {
+    console.log("=== START ADD HEADER ===");
+
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    const apiKey = process.env.API_KEY;
+
+    if (!apiUrl || !apiKey) return { success: false, message: "Config Error: Missing API URL/Key" };
+
+    const cookieStore = await cookies();
+    const authSession = cookieStore.get("session_auth")?.value;
+    if (!authSession) return { success: false, message: "Unauthorized: Session Expired" };
+
+    let username = "System";
+    try {
+        const base64 = authSession.split(" ")[1];
+        username = Buffer.from(base64, "base64").toString("ascii").split(":")[0];
+    } catch (e) { console.error(e); }
+
+    try {
+        const currentLastNumber = await getLastNumber(apiUrl, apiKey, authSession);
+        
+        let attempts = 0;
+        const maxAttempts = 5;
+        let success = false;
+        let finalResult = null;
+
+        while (!success && attempts < maxAttempts) {
+            attempts++;
+            const tryCounter = currentLastNumber + attempts;
+            const tryKey1 = formatKey(tryCounter);
+
+            console.log(`>> Percobaan ke-${attempts}: Key=${tryKey1}`);
+
+            const payload: UD100Payload = {
+                Company: "166075",
+                Key1: tryKey1,
+                Key2: "",
+                Key3: "",
+                Key4: "",
+                Key5: "SJPlant",
+                ShortChar01: header.shipFrom,
+                ShortChar02: header.shipTo,
+                ShortChar06: "OPEN",
+                ShortChar10: username,
+                Date01: header.actualShipDate ? new Date(header.actualShipDate).toISOString() : null,
+                Date02: header.shipDate ? new Date(header.shipDate).toISOString() : null,
+                Date20: new Date().toISOString(),
+                CheckBox01: header.isShipped,
+                CheckBox05: header.isTgp,
+                Character01: header.comment,
+                Number20: tryCounter,
+                RowMod: "A",
+            };
+
+            const response = await fetch(`${apiUrl}/v1/Ice.BO.UD100Svc/Update`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": apiKey,
+                    Authorization: authSession,
+                },
+                body: JSON.stringify({ ds: { UD100: [payload] } }),
+            });
+
+            if (response.ok) {
+                try {
+                    finalResult = await response.json();
+                } catch (jsonErr) {
+                    console.warn("Response OK tapi JSON kosong (mungkin 204 No Content)");
+                    finalResult = { parameters: {}, ds: { UD100: [payload] } }; 
+                }
+                console.log(">> EPICOR SUCCESS RESPONSE:", JSON.stringify(finalResult, null, 2));
+                
+                success = true;
+            } else {
+                const status = response.status;
+                const txt = await response.text();
+                
+                if (status === 409 || txt.includes("Duplicate") || txt.includes("already exists")) {
+                    console.warn(`>> Gagal (Duplicate) Key ${tryKey1}. Retrying...`);
+                    continue;
+                } else {
+                    throw new Error(`Epicor Error ${status}: ${txt}`);
+                }
+            }
+        }
+
+        if (!success) {
+            throw new Error(`Gagal menyimpan setelah ${maxAttempts}x percobaan.`);
+        }
+
+        return { success: true, data: finalResult };
+
+    } catch (error) {
+        console.error(">> FATAL ERROR:", error);
+        return {
+            success: false,
+            message: error instanceof Error ? error.message : "Server Error",
+        };
+    }
+}

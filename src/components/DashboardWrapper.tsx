@@ -16,7 +16,7 @@ export default function DashboardWrapper({
             isOpen ? 'ml-0 lg:ml-64' : 'ml-0'
         }`}
     >
-        <div className="p-4 sm:p-8">
+        <div className="p-4  sm:p-8">
             {children}
         </div>
     </main>

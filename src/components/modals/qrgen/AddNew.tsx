@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon, FunnelIcon, ListBulletIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
-import { getPartsList } from '@/api/part'
-import { getPartLots } from '@/api/lot'
-import { saveToUD14 } from '@/api/addqrcode'
+import { getPartsList } from '@/api/qr/part'
+import { getPartLots } from '@/api/qr/lot'
+import { saveToUD14 } from '@/api/qr/addqrcode'
 
 export type NewPartItem = {
     partNumber: string

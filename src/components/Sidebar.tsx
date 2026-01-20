@@ -3,21 +3,15 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { logoutAction } from '../api/logout'
+import { logoutAction } from '../api/auth/logout'
 import { useSidebar } from '../context/SidebarContext'
 import {
-    HomeIcon,
-    QrCodeIcon,
     UserCircleIcon,
     ArrowRightStartOnRectangleIcon,
     XMarkIcon
 } from '@heroicons/react/24/outline'
 import logoImage from '../../public/assets/logo.png'
-
-const menuItems = [
-    { name: 'Dashboard', href: '/', icon: HomeIcon },
-    { name: 'QR Generation', href: '/qrgeneration', icon: QrCodeIcon },
-]
+import { MENU_ITEMS } from '../constants/navigation'
 
 type SidebarProps = {
     userId: string
@@ -73,8 +67,10 @@ export default function Sidebar({ userId }: SidebarProps) {
 
                     {/* Menu */}
                     <nav className="mt-6 px-3 space-y-2">
-                        {menuItems.map((item) => {
-                            const isActive = pathname === item.href
+                        {MENU_ITEMS.map((item) => {
+                            const isActive = item.match 
+                                ? item.match(pathname) 
+                                : pathname === item.href
 
                             return (
                                 <Link
