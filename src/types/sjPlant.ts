@@ -16,11 +16,19 @@ export type SjPlantHeader = {
 }
 
 export type SjPlantLine = {
-  sysRowId: string;
+  sysRowId: string;       // Ini pengganti GUID
+  lineNum: number;
   partNum: string;
   partDesc: string;
-  qty: number;
   uom: string;
+  warehouseCode: string;
+  lotNum: string;
+  binNum: string;
+  qty: number;
+  comment: string;
+  status: string;
+  qrCode: string;
+  timestamp?: string;     
 }
 
 export interface UD100RawData {

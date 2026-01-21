@@ -1,7 +1,7 @@
 'use client'
 
 import { SjPlantHeader } from '@/types/sjPlant'
-import { MagnifyingGlassIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
+import { ChevronDownIcon } from '@heroicons/react/24/outline'
 import { ApiShip } from '@/api/sjplant/ship'
 
 interface HeaderSectionProps {
@@ -166,7 +166,7 @@ export default function HeaderSection({ data, plantList, onChange, isReadOnly = 
             </div>
 
             {/* Comment Section */}
-            <div className="mt-8 border-t border-gray-100">
+            <div className="mt-8">
                 <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Comment</label>
                 <textarea
                     name="comment"

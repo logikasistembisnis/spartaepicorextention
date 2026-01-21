@@ -19,6 +19,7 @@ export default function SJAntarPlantEntry() {
     const [isSaving, setIsSaving] = useState(false);
     const [isLoadingData, setIsLoadingData] = useState(false);
     const [plantList, setPlantList] = useState<ApiShip[]>([]);
+    const [lines, setLines] = useState<SjPlantLine[]>([]);
 
     // State Header
     const [headerData, setHeaderData] = useState<SjPlantHeader>({
@@ -188,13 +189,14 @@ export default function SJAntarPlantEntry() {
             </div>
 
             {/* Lines Section */}
-            <div className={`px-4 mt-4 transition-all duration-300 ${isLinesActive ? '' : 'opacity-50 pointer-events-none grayscale'}`}>
+            <div className={`px-4 mt-6 transition-all duration-300 ${isLinesActive ? '' : 'opacity-50 pointer-events-none grayscale'}`}>
                 {isLinesActive ? (
-                    <div className="p-4 bg-white rounded border border-gray-200">
-                        {/* <LinesSection headerId={headerData.packNum} /> */}
-                    </div>
+                    <LinesSection 
+                        lines={lines} 
+                        setLines={setLines} 
+                    />
                 ) : (
-                    <div className="p-4 bg-gray-100 rounded border border-gray-300 text-center text-gray-500">
+                    <div className="p-8 bg-gray-50 rounded border-2 border-dashed border-gray-300 text-center text-gray-500">
                         Simpan Header terlebih dahulu untuk menambah barang (Lines).
                     </div>
                 )}
