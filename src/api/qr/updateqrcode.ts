@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { apiFetch } from "@/api/apiFetch";
 
 // Tipe data untuk Update
 export type UpdateUD14Item = {
@@ -20,17 +21,10 @@ export type UpdateUD14Item = {
 };
 
 export async function updateUD14(items: UpdateUD14Item[]) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const apiKey = process.env.API_KEY;
-
-  if (!apiUrl || !apiKey) {
-    return { success: false, message: "Konfigurasi server tidak lengkap." };
-  }
-
   const cookieStore = await cookies();
-  const authSession = cookieStore.get("session_auth")?.value;
+  const authHeader = cookieStore.get("session_auth")?.value;
 
-  if (!authSession) {
+  if (!authHeader) {
     return { success: false, message: "Unauthorized: Silakan login ulang." };
   }
 
@@ -47,13 +41,10 @@ export async function updateUD14(items: UpdateUD14Item[]) {
   };
 
   try {
-    const response = await fetch(`${apiUrl}/v1/Ice.BO.UD14Svc/Update`, {
+    const response = await apiFetch(`/v1/Ice.BO.UD14Svc/Update`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        Authorization: authSession,
-      },
+      authHeader,
+      requireLicense: true,
       body: JSON.stringify(payload),
     });
 

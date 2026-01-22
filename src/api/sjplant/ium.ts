@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { apiFetch } from "@/api/apiFetch";
 
 type ApiPartData = {
   Part_PartNum: string;
@@ -19,13 +20,6 @@ type ApiResponse = {
 };
 
 export async function getPartIum(partNum: string): Promise<ApiResponse> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const apiKey = process.env.API_KEY;
-
-  if (!apiUrl || !apiKey) {
-    return { success: false, error: "Config Error" };
-  }
-
   const cookieStore = await cookies();
   const authHeader = cookieStore.get("session_auth")?.value;
 
@@ -35,18 +29,15 @@ export async function getPartIum(partNum: string): Promise<ApiResponse> {
 
   try {
     const encodedPartNum = encodeURIComponent(partNum);
-    
-    const response = await fetch(
-      `${apiUrl}/v2/odata/166075/BaqSvc/UDNEL_LotPartFC/Data?PartNum=${encodedPartNum}`,
+
+    const response = await apiFetch(
+      `/v2/odata/166075/BaqSvc/UDNEL_LotPartFC/Data?PartNum=${encodedPartNum}`,
       {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          Authorization: authHeader,
-        },
+        authHeader,
+        requireLicense: true,
         cache: "no-store",
-      }
+      },
     );
 
     if (!response.ok) {
@@ -57,12 +48,11 @@ export async function getPartIum(partNum: string): Promise<ApiResponse> {
 
     // Ambil data pertama jika ada
     if (result.value && result.value.length > 0) {
-        // Asumsi semua result memiliki IUM yang sama untuk part ini, ambil yang pertama
-        return { success: true, ium: result.value[0].Part_IUM };
+      // Asumsi semua result memiliki IUM yang sama untuk part ini, ambil yang pertama
+      return { success: true, ium: result.value[0].Part_IUM };
     }
 
     return { success: false, error: "Part not found" };
-
   } catch (error) {
     console.error("Fetch IUM Error:", error);
     return { success: false, error: "Server Error fetching IUM" };

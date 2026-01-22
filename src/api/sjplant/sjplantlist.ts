@@ -1,95 +1,88 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { apiFetch } from "@/api/apiFetch";
 
 export type SJItem = {
-    id: string;
-    packNumber: string;
-    actualShipDate: string;
-    shipTo: string;
-    status: string;
+  id: string;
+  packNumber: string;
+  actualShipDate: string;
+  shipTo: string;
+  status: string;
 };
 
 interface EpicorBaqRow {
-    UD100_Key1: string;              // Pack Number
-    UD100_Date01: string | null;     // Actual Ship Date
-    UD100_ShortChar02: string | null;// Ship To
-    UD100_ShortChar06: string | null;// Status 
+  UD100_Key1: string; // Pack Number
+  UD100_Date01: string | null; // Actual Ship Date
+  UD100_ShortChar02: string | null; // Ship To
+  UD100_ShortChar06: string | null; // Status
 }
 
 interface EpicorBaqResponse {
-    value: EpicorBaqRow[];
+  value: EpicorBaqRow[];
 }
 
 type ActionResponse = {
-    success: boolean;
-    message?: string;
-    data: SJItem[];
+  success: boolean;
+  message?: string;
+  data: SJItem[];
 };
 
 export async function getSJList(): Promise<ActionResponse> {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-    const apiKey = process.env.API_KEY;
+  const cookieStore = await cookies();
+  const authHeader = cookieStore.get("session_auth")?.value;
 
-    if (!apiUrl || !apiKey) {
-        return { success: false, message: "Konfigurasi server tidak lengkap.", data: [] };
+  if (!authHeader) {
+    return { success: false, message: "Unauthorized.", data: [] };
+  }
+
+  try {
+    const baqId = "UDNEL_SJPlantQR";
+    const queryUrl = `/v2/odata/166075/BaqSvc/${baqId}/Data`;
+
+    const response = await apiFetch(queryUrl, {
+      method: "GET",
+      authHeader,
+      requireLicense: true,
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gagal mengambil data: ${response.statusText}`);
     }
 
-    const cookieStore = await cookies();
-    const authSession = cookieStore.get("session_auth")?.value;
+    const result = (await response.json()) as EpicorBaqResponse;
+    const mappedData: SJItem[] = result.value.map((item) => {
+      let formattedDate = "-";
 
-    if (!authSession) {
-        return { success: false, message: "Unauthorized.", data: [] };
+      if (item.UD100_Date01) {
+        formattedDate = new Date(item.UD100_Date01).toLocaleDateString(
+          "id-ID",
+          {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          },
+        );
+      }
+
+      return {
+        id: item.UD100_Key1,
+        packNumber: item.UD100_Key1,
+        actualShipDate: formattedDate,
+        shipTo: item.UD100_ShortChar02 || "-",
+        status: item.UD100_ShortChar06 || "OPEN",
+      };
+    });
+
+    return { success: true, data: mappedData };
+  } catch (error: unknown) {
+    let errorMessage = "Gagal mengambil data list.";
+    if (error instanceof Error) {
+      errorMessage = error.message;
     }
+    console.error("Error fetching SJ List:", errorMessage);
 
-    try {
-        const baqId = "UDNEL_SJPlantQR";
-        const queryUrl = `${apiUrl}/v2/odata/166075/BaqSvc/${baqId}/Data`;
-
-        const response = await fetch(queryUrl, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                "x-api-key": apiKey,
-                "Authorization": authSession,
-            },
-            cache: "no-store",
-        });
-
-        if (!response.ok) {
-            throw new Error(`Gagal mengambil data: ${response.statusText}`);
-        }
-
-        const result = (await response.json()) as EpicorBaqResponse;
-        const mappedData: SJItem[] = result.value.map((item) => {
-            let formattedDate = "-";
-
-            if (item.UD100_Date01) {
-                formattedDate = new Date(item.UD100_Date01).toLocaleDateString("id-ID", {
-                    year: "numeric",
-                    month: "2-digit",
-                    day: "2-digit",
-                });
-            }
-
-            return {
-                id: item.UD100_Key1,
-                packNumber: item.UD100_Key1,
-                actualShipDate: formattedDate,
-                shipTo: item.UD100_ShortChar02 || "-",
-                status: item.UD100_ShortChar06 || "OPEN",
-            };
-        });
-
-        return { success: true, data: mappedData };
-
-    } catch (error: unknown) {
-        let errorMessage = "Gagal mengambil data list.";
-        if (error instanceof Error) {
-            errorMessage = error.message;
-        }
-        console.error("Error fetching SJ List:", errorMessage);
-
-        return { success: false, message: errorMessage, data: [] };
-    }
+    return { success: false, message: errorMessage, data: [] };
+  }
 }

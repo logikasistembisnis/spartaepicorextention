@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { apiFetch } from "@/api/apiFetch";
 
 type ActionState = {
   error?: string;
@@ -9,7 +10,7 @@ type ActionState = {
 
 export async function loginAction(
   prevState: ActionState,
-  formData: FormData
+  formData: FormData,
 ): Promise<ActionState> {
   const username = formData.get("username") as string;
   const password = formData.get("password") as string;
@@ -19,48 +20,27 @@ export async function loginAction(
     return { error: "Username dan password wajib diisi." };
   }
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const apiKey = process.env.API_KEY;
-
-  if (!apiUrl || !apiKey) {
-    return { error: "Konfigurasi server error (ENV missing)." };
-  }
-
-  const isProd = process.env.NODE_ENV === "production";
-
   try {
     // Basic Auth token (base64 encoded username:password)
     const basicAuth = Buffer.from(`${username}:${password}`).toString("base64");
-    const authHeaderValue = `Basic ${basicAuth}`;
+    const authHeader = `Basic ${basicAuth}`;
 
-    const response = await fetch(
-      `${apiUrl}/v1/Ice.BO.UserFileSvc/ValidatePassword`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey, // Dari env
-          Authorization: authHeaderValue, // Basic Auth
-        },
-        body: JSON.stringify({
-          userID: username,
-          password: password,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      // Handle jika login gagal dari API (misal 401 Unauthorized)
-      return { error: "Login gagal. Cek kembali username dan password." };
-    }
-
-    const data = await response.json();
+    const response = await apiFetch(`/v1/Ice.BO.UserFileSvc/ValidatePassword`, {
+      method: "POST",
+      authHeader,
+      requireLicense: true,
+      body: JSON.stringify({
+        userID: username,
+        password: password,
+      }),
+    });
 
     // Cek apakah returnObj true
+    const data = await response.json();
     if (data.returnObj === true) {
       const cookieStore = await cookies();
 
-      cookieStore.set("session_auth", authHeaderValue, {
+      cookieStore.set("session_auth", authHeader, {
         httpOnly: true, // JS browser gak bisa baca (aman dari XSS)
         secure: false,
         sameSite: "lax",

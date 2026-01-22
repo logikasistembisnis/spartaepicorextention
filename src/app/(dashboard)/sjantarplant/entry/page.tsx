@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import HeaderSection from '@/components/sjantarplant/HeaderSection'
 import LinesSection from '@/components/sjantarplant/LinesSection'
@@ -13,7 +13,7 @@ import { getHeaderById } from '@/api/sjplant/getbyid'
 import { updateHeaderToUD100 } from '@/api/sjplant/updateheader'
 import { addLinesToUD100, ParentKeys } from '@/api/sjplant/addlines';
 
-export default function SJAntarPlantEntry() {
+function EntryContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const packNumParam = searchParams.get('id')
@@ -61,6 +61,9 @@ export default function SJAntarPlantEntry() {
                     setHeaderData(result.data);
                     if (result.rawData) {
                         setRawData(result.rawData);
+                    }
+                    if (result.lines) {
+                        setLines(result.lines);
                     }
                 } else {
                     alert(result.message || "Gagal mengambil data header.");
@@ -130,9 +133,9 @@ export default function SJAntarPlantEntry() {
                 // Cari Data Record Baru dari Response Epicor
                 const responseData = resHeader.data;
                 const newRecord = responseData?.returnObj?.UD100?.[0] ||
-                                  responseData?.parameters?.ds?.UD100?.[0] ||
-                                  responseData?.ds?.UD100?.[0] ||
-                                  responseData?.UD100?.[0];
+                    responseData?.parameters?.ds?.UD100?.[0] ||
+                    responseData?.ds?.UD100?.[0] ||
+                    responseData?.UD100?.[0];
 
                 if (!newRecord || !newRecord.Key1) {
                     throw new Error("Header tersimpan tapi gagal mengambil Key ID baru.");
@@ -156,7 +159,7 @@ export default function SJAntarPlantEntry() {
 
                 if (linesToSave.length > 0) {
                     const resLines = await addLinesToUD100(currentParentKeys, linesToSave);
-                    
+
                     if (!resLines.success) {
                         alert(`Header tersimpan (SJ: ${currentParentKeys.Key1}), TAPI Gagal Simpan Barang: ${resLines.message}`);
                     }
@@ -172,16 +175,16 @@ export default function SJAntarPlantEntry() {
                 router.replace(`/sjantarplant/entry?id=${currentParentKeys.Key1}`);
             }
 
-        } catch (error: unknown) { 
+        } catch (error: unknown) {
             console.error("Process Error:", error);
-            
+
             let msg = "Terjadi kesalahan sistem.";
             if (error instanceof Error) {
                 msg = error.message;
             } else if (typeof error === "string") {
                 msg = error;
             }
-            
+
             alert(msg);
         } finally {
             setIsSaving(false);
@@ -233,9 +236,9 @@ export default function SJAntarPlantEntry() {
             {/* Lines Section */}
             <div className={`px-4 mt-6 transition-all duration-300 ${isLinesActive ? '' : 'opacity-50 pointer-events-none grayscale'}`}>
                 {isLinesActive ? (
-                    <LinesSection 
-                        lines={lines} 
-                        setLines={setLines} 
+                    <LinesSection
+                        lines={lines}
+                        setLines={setLines}
                         shipFrom={headerData.shipFrom}
                     />
                 ) : (
@@ -246,4 +249,12 @@ export default function SJAntarPlantEntry() {
             </div>
         </div>
     )
+}
+
+export default function SJAntarPlantEntryPage() {
+  return (
+    <Suspense fallback={<div className="p-10 text-center">Loading Page...</div>}>
+      <EntryContent />
+    </Suspense>
+  );
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { apiFetch } from "@/api/apiFetch";
 
 export type qrList = {
   UD14_Company: string;
@@ -29,18 +30,7 @@ type ApiResponse = {
   error?: string;
 };
 
-export async function getGeneratedQRList(): Promise<ApiResponse>  {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const apiKey = process.env.API_KEY;
-
-  // Pastikan API URL & Key ada
-  if (!apiUrl || !apiKey) {
-    return {
-      success: false,
-      error: "Konfigurasi server (API URL/KEY) tidak lengkap.",
-    };
-  }
-
+export async function getGeneratedQRList(): Promise<ApiResponse> {
   // Ambil Auth Token dari Cookie
   const cookieStore = await cookies();
   const authHeader = cookieStore.get("session_auth")?.value;
@@ -50,17 +40,14 @@ export async function getGeneratedQRList(): Promise<ApiResponse>  {
   }
 
   try {
-    const response = await fetch(
-      `${apiUrl}/v2/odata/166075/BaqSvc/UDNEL_FCQRCode/Data`,
+    const response = await apiFetch(
+      `/v2/odata/166075/BaqSvc/UDNEL_FCQRCode/Data`,
       {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          Authorization: authHeader,
-        },
+        authHeader,
+        requireLicense: true,
         cache: "no-store",
-      }
+      },
     );
 
     if (!response.ok) {
@@ -96,15 +83,14 @@ export async function getGeneratedQRList(): Promise<ApiResponse>  {
 export async function deleteQRItem(
   key1: string,
   key2: string,
-  key3: string = '',
-  key4: string = '',
-  key5: string = ''
+  key3: string = "",
+  key4: string = "",
+  key5: string = "",
 ): Promise<{ success: boolean; message?: string }> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const apiKey = process.env.API_KEY;
+  const apiKey = process.env.NEXT_PUBLIC_API_KEY;
 
   // 1. Validasi Config
-  if (!apiUrl || !apiKey) {
+  if (!apiKey) {
     return {
       success: false,
       // FIX: Ganti 'error' jadi 'message' agar sesuai tipe return
@@ -114,44 +100,46 @@ export async function deleteQRItem(
 
   // 2. Validasi Auth
   const cookieStore = await cookies();
-  const authSession = cookieStore.get("session_auth")?.value;
+  const authHeader = cookieStore.get("session_auth")?.value;
 
-  if (!authSession) {
+  if (!authHeader) {
     return { success: false, message: "Unauthorized: Silakan login ulang." };
   }
 
   try {
     const payload = {
-        key1: key1,
-        key2: key2,
-        key3: key3,
-        key4: key4,
-        key5: key5
+      key1: key1,
+      key2: key2,
+      key3: key3,
+      key4: key4,
+      key5: key5,
     };
 
-    const response = await fetch(`${apiUrl}/v1/Ice.BO.UD14Svc/DeleteByID`, {
-      method: 'POST', 
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        Authorization: authSession,
-      },
+    // 4. Panggil Endpoint DeleteByID
+    // Penting: Method biasanya POST untuk RPC call di Epicor REST v1
+    const response = await apiFetch(`/v1/Ice.BO.UD14Svc/DeleteByID`, {
+      method: "POST",
+      authHeader,
+      requireLicense: true,
       body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
-      const errorData = await response.json() as unknown;
+      const errorData = (await response.json()) as unknown;
       let serverMsg = "Gagal menghapus data";
-      
-      if (typeof errorData === 'object' && errorData !== null && 'ErrorMessage' in errorData) {
+
+      if (
+        typeof errorData === "object" &&
+        errorData !== null &&
+        "ErrorMessage" in errorData
+      ) {
         serverMsg = (errorData as { ErrorMessage: string }).ErrorMessage;
       }
-      
+
       throw new Error(serverMsg);
     }
 
     return { success: true };
-
   } catch (error: unknown) {
     console.error("Delete Error:", error);
 
@@ -159,7 +147,7 @@ export async function deleteQRItem(
 
     if (error instanceof Error) {
       message = error.message;
-    } else if (typeof error === 'string') {
+    } else if (typeof error === "string") {
       message = error;
     }
 

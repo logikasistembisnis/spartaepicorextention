@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { apiFetch } from "@/api/apiFetch";
 
 type ApiPart = {
   Part_PartNum: string;
@@ -22,17 +23,6 @@ type ApiResponse = {
 };
 
 export async function getPartsList(): Promise<ApiResponse> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const apiKey = process.env.API_KEY;
-
-  // Pastikan API URL & Key ada
-  if (!apiUrl || !apiKey) {
-    return {
-      success: false,
-      error: "Konfigurasi server (API URL/KEY) tidak lengkap.",
-    };
-  }
-
   // Ambil Auth Token dari Cookie
   const cookieStore = await cookies();
   const authHeader = cookieStore.get("session_auth")?.value;
@@ -42,17 +32,14 @@ export async function getPartsList(): Promise<ApiResponse> {
   }
 
   try {
-    const response = await fetch(
-      `${apiUrl}/v2/odata/166075/BaqSvc/UDNEL_PartFG/Data`,
+    const response = await apiFetch(
+      `/v2/odata/166075/BaqSvc/UDNEL_PartFG/Data`,
       {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          Authorization: authHeader,
-        },
+        authHeader,
+        requireLicense: true,
         cache: "no-store",
-      }
+      },
     );
 
     if (!response.ok) {

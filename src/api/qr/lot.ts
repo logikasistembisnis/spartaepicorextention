@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { apiFetch } from "@/api/apiFetch";
 
 type ApiLot = {
   Part_PartNum: string;
@@ -19,13 +20,6 @@ type ApiResponse = {
 };
 
 export async function getPartLots(partNum: string): Promise<ApiResponse> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const apiKey = process.env.API_KEY;
-
-  if (!apiUrl || !apiKey) {
-    return { success: false, error: "Config Error" };
-  }
-
   const cookieStore = await cookies();
   const authHeader = cookieStore.get("session_auth")?.value;
 
@@ -37,18 +31,15 @@ export async function getPartLots(partNum: string): Promise<ApiResponse> {
     // PENTING: Gunakan $filter OData untuk mengambil lot sesuai PartNum saja
     // Encode URI component untuk menangani karakter spesial jika ada
     const encodedPartNum = encodeURIComponent(partNum);
-    
-    const response = await fetch(
-      `${apiUrl}/v2/odata/166075/BaqSvc/UDNEL_LotPartFC/Data?PartNum=${encodedPartNum}`,
+
+    const response = await apiFetch(
+      `/v2/odata/166075/BaqSvc/UDNEL_LotPartFC/Data?PartNum=${encodedPartNum}`,
       {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          Authorization: authHeader,
-        },
+        authHeader,
+        requireLicense: true,
         cache: "no-store",
-      }
+      },
     );
 
     if (!response.ok) {
@@ -57,7 +48,6 @@ export async function getPartLots(partNum: string): Promise<ApiResponse> {
 
     const result = (await response.json()) as ODataResponse;
     return { success: true, data: result.value };
-
   } catch (error) {
     console.error("Fetch Lot Error:", error);
     return { success: false, error: "Server Error fetching lots" };

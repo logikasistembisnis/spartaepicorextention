@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { apiFetch } from "@/api/apiFetch";
 
 export type ApiBin = {
   BinNum: string;
@@ -20,14 +21,11 @@ type ApiResponse = {
   error?: string;
 };
 
-export async function getPartBinList(partNum: string, whseCode: string, lotNum: string): Promise<ApiResponse> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const apiKey = process.env.API_KEY;
-
-  if (!apiUrl || !apiKey) {
-    return { success: false, error: "Config Error" };
-  }
-
+export async function getPartBinList(
+  partNum: string,
+  whseCode: string,
+  lotNum: string,
+): Promise<ApiResponse> {
   const cookieStore = await cookies();
   const authHeader = cookieStore.get("session_auth")?.value;
 
@@ -37,7 +35,10 @@ export async function getPartBinList(partNum: string, whseCode: string, lotNum: 
 
   try {
     // Construct Where Clause
-    const whereClause = `PartNum='${partNum}' AND WhseCode='${whseCode}' AND LotNumber='${lotNum}'`;
+    let whereClause = `PartNum='${partNum}' AND WhseCode='${whseCode}'`;
+    if (lotNum) {
+       whereClause += ` AND LotNumber='${lotNum}'`;
+    }
 
     const body = {
       pageSize: 0,
@@ -45,22 +46,19 @@ export async function getPartBinList(partNum: string, whseCode: string, lotNum: 
       whereClause: whereClause,
     };
 
-    const response = await fetch(
-      `${apiUrl}/v1/Erp.BO.PartBinSearchSvc/GetPartBinSearch`,
+    const response = await apiFetch(
+      `/v1/Erp.BO.PartBinSearchSvc/GetPartBinSearch`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          Authorization: authHeader,
-        },
+        authHeader,
+        requireLicense: true,
         body: JSON.stringify(body),
         cache: "no-store",
-      }
+      },
     );
 
     if (!response.ok) {
-        return { success: false, error: `Error: ${response.status}` };
+      return { success: false, error: `Error: ${response.status}` };
     }
 
     const result = (await response.json()) as PartBinSearchResponse;

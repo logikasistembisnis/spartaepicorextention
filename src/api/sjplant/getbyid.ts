@@ -1,88 +1,187 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { SjPlantHeader, UD100RawData } from "@/types/sjPlant";
+import { SjPlantHeader, UD100RawData, SjPlantLine, UD100ARawData, WarehouseOption, BinOption } from "@/types/sjPlant";
+import { apiFetch } from "@/api/apiFetch";
+import { getPartWarehouseList } from "@/api/sjplant/whse";
+import { getPartBinList } from "@/api/sjplant/bin";
 
 type GetHeaderResult = {
-    success: boolean;
-    message?: string;
-    data?: SjPlantHeader;
-    rawData?: UD100RawData;
-}
+  success: boolean;
+  message?: string;
+  data?: SjPlantHeader;
+  rawData?: UD100RawData;
+  lines?: SjPlantLine[];
+};
 
 export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-    const apiKey = process.env.API_KEY;
+  const cookieStore = await cookies();
+  const authHeader = cookieStore.get("session_auth")?.value;
 
-    if (!apiUrl || !apiKey) return { success: false, message: "Config Error" };
+  if (!authHeader) return { success: false, message: "Unauthorized" };
 
-    const cookieStore = await cookies();
-    const authSession = cookieStore.get("session_auth")?.value;
+  try {
+    const queryParams = new URLSearchParams({
+      key1: packNum,
+      key2: "",
+      key3: "",
+      key4: "",
+      key5: "SJPlant",
+    });
 
-    if (!authSession) return { success: false, message: "Unauthorized" };
+    const queryUrl = `/v1/Ice.BO.UD100Svc/GetByID?${queryParams.toString()}`;
 
-    try {
-        const queryParams = new URLSearchParams({
-            key1: packNum,
-            key2: "",
-            key3: "",
-            key4: "",
-            key5: "SJPlant",
-        });
+    const response = await apiFetch(queryUrl, {
+      method: "GET",
+      authHeader,
+      requireLicense: true,
+      cache: "no-store",
+    });
 
-        const queryUrl = `${apiUrl}/v1/Ice.BO.UD100Svc/GetByID?${queryParams.toString()}`;
-
-        const response = await fetch(queryUrl, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                "x-api-key": apiKey,
-                Authorization: authSession,
-            },
-            cache: "no-store",
-        });
-
-        if (!response.ok) {
-            return {
-                success: false,
-                message: `Gagal mengambil data: ${response.statusText}`,
-            };
-        }
-
-        const result = await response.json();
-
-        if (
-            !result.returnObj ||
-            !result.returnObj.UD100 ||
-            result.returnObj.UD100.length === 0
-        ) {
-            return { success: false, message: "Data tidak ditemukan." };
-        }
-
-        const raw = result.returnObj.UD100[0] as UD100RawData;
-
-        // --- MAPPING DATA ---
-        const headerData: SjPlantHeader = {
-            packNum: raw.Key1,
-            shipFrom: raw.ShortChar01 || "",
-            shipTo: raw.ShortChar02 || "",
-            // Date01: "2026-01-19T00:00:00" -> ambil tanggalnya saja
-            actualShipDate: raw.Date01 ? raw.Date01.split("T")[0] : "",
-            isTgp: raw.CheckBox05 || false,
-            comment: raw.Character01 || "",
-            isShipped: raw.CheckBox01 || false,
-            shipDate: raw.Date02 ? raw.Date02.split("T")[0] : "",
-            status: raw.ShortChar06 || "OPEN",
-            company: raw.Company,
-            sysRowID: raw.SysRowID,
-            sysRevID: raw.SysRevID,
-            bitFlag: raw.BitFlag,
-            rowMod: "U",
-        };
-
-        return { success: true, data: headerData, rawData: raw };
-    } catch (error) {
-        console.error("Get Header Error:", error);
-        return { success: false, message: "Terjadi kesalahan server." };
+    if (!response.ok) {
+      return {
+        success: false,
+        message: `Gagal mengambil data: ${response.statusText}`,
+      };
     }
+
+    const result = await response.json();
+
+    if (
+      !result.returnObj ||
+      !result.returnObj.UD100 ||
+      result.returnObj.UD100.length === 0
+    ) {
+      return { success: false, message: "Data tidak ditemukan." };
+    }
+
+    const raw = result.returnObj.UD100[0] as UD100RawData;
+
+    // --- MAPPING DATA ---
+    const headerData: SjPlantHeader = {
+      packNum: raw.Key1,
+      shipFrom: raw.ShortChar01 || "",
+      shipTo: raw.ShortChar02 || "",
+      // Date01: "2026-01-19T00:00:00" -> ambil tanggalnya saja
+      actualShipDate: raw.Date01 ? raw.Date01.split("T")[0] : "",
+      isTgp: raw.CheckBox05 || false,
+      comment: raw.Character01 || "",
+      isShipped: raw.CheckBox01 || false,
+      shipDate: raw.Date02 ? raw.Date02.split("T")[0] : "",
+      status: raw.ShortChar06 || "OPEN",
+      company: raw.Company,
+      sysRowID: raw.SysRowID,
+      sysRevID: raw.SysRevID,
+      bitFlag: raw.BitFlag,
+      rowMod: "U",
+    };
+
+    const ud100aList = (result.returnObj.UD100A || []) as UD100ARawData[];
+
+    // 1. Pisahkan record
+    const lineRecords = ud100aList.filter(
+      (r) => r.ChildKey5 === "SJPlant"
+    );
+
+    const qrRecords = ud100aList.filter(
+      (r) => r.ChildKey5 === "SJPlant#QRCode"
+    );
+
+    // 2. Initial Mapping ke SjPlantLine
+    const initialLines: SjPlantLine[] = lineRecords.map((line) => {
+      const qr = qrRecords.find(
+        (q) => q.ChildKey1 === line.ChildKey1
+      );
+
+      return {
+        sysRowId: qr?.Character03 || line.SysRowID || "", // GUID
+        lineNum: Number(line.ChildKey1),
+        partNum: line.ShortChar01 || "",
+        partDesc: line.Character01 || "",
+        uom: line.ShortChar02 || "",
+        warehouseCode: line.ShortChar03 || "",
+        lotNum: line.ShortChar04 || "",
+        binNum: line.ShortChar05 || "",
+        qty: Number(line.Number01) || 0,
+        comment: line.ShortChar06 || "",
+        status: "OPEN",
+        qrCode: qr?.Character01 || "",
+        timestamp: qr?.ShortChar03,
+        // Array kosong dulu, nanti diisi di langkah enrichment
+        availableWarehouses: [],
+        availableBins: [],
+      };
+    });
+
+    const enrichedLines = await Promise.all(
+      initialLines.map(async (line) => {
+
+        let whOptions: WarehouseOption[] = [];
+        let binOptions: BinOption[] = [];
+
+        // A. FETCH WAREHOUSE LIST
+        if (line.partNum && headerData.shipFrom) {
+          const whRes = await getPartWarehouseList(line.partNum, headerData.shipFrom);
+
+          if (whRes.success && whRes.data) {
+            // Mapping dari ApiWarehouse ke WarehouseOption
+            whOptions = whRes.data.map(w => ({
+              code: w.PartWhse_WarehouseCode,
+              name: w.Warehse_Description
+            }));
+          }
+        }
+
+        // B. FETCH BIN LIST
+        if (line.partNum && line.warehouseCode) {
+          
+          const binRes = await getPartBinList(line.partNum, line.warehouseCode, ""); 
+
+          const rawBins = binRes.success && binRes.data ? binRes.data : [];
+
+          if (line.binNum) {
+             const isBinExist = rawBins.some(b => b.BinNum === line.binNum);
+             
+             if (!isBinExist) {
+                rawBins.push({
+                   BinNum: line.binNum,
+                   BinDesc: `${line.binNum} (Current)`, // Penanda visual
+                   QtyOnHand: 0 // Asumsi 0 jika tidak ada di list search
+                });
+             }
+          }
+
+          const uniqueBins = new Map();
+          rawBins.forEach(b => {
+              if(!uniqueBins.has(b.BinNum)){
+                  uniqueBins.set(b.BinNum, {
+                      code: b.BinNum,
+                      desc: b.BinDesc,
+                      qty: b.QtyOnHand
+                  });
+              }
+          });
+          
+          binOptions = Array.from(uniqueBins.values());
+        }
+
+        // Return line yang sudah diperkaya dengan opsi dropdown
+        return {
+          ...line,
+          availableWarehouses: whOptions,
+          availableBins: binOptions
+        };
+      })
+    );
+
+    return {
+      success: true,
+      data: headerData,
+      rawData: raw,
+      lines: enrichedLines.sort((a, b) => b.lineNum - a.lineNum),
+    };
+  } catch (error) {
+    console.error("Get Header Error:", error);
+    return { success: false, message: "Terjadi kesalahan server." };
+  }
 }
