@@ -10,7 +10,8 @@ import Link from 'next/link'
 import { getPlantsList, ApiShip } from '@/api/sjplant/ship'
 import { saveHeaderToUD100 } from '@/api/sjplant/addheader'
 import { getHeaderById } from '@/api/sjplant/getbyid'
-import { updateHeaderToUD100 } from '@/api/sjplant/update'
+import { updateHeaderToUD100 } from '@/api/sjplant/updateheader'
+import { addLinesToUD100, ParentKeys } from '@/api/sjplant/addlines';
 
 export default function SJAntarPlantEntry() {
     const router = useRouter()
@@ -91,6 +92,8 @@ export default function SJAntarPlantEntry() {
         setIsSaving(true);
         try {
             const isEditMode = !!packNumParam && !!rawData;
+            let currentParentKeys: ParentKeys | null = null;
+            let isHeaderSuccess = false;
 
             if (isEditMode) {
                 if (!rawData) {
@@ -99,48 +102,87 @@ export default function SJAntarPlantEntry() {
                 }
 
                 // Panggil API Update
-                const result = await updateHeaderToUD100(headerData, rawData);
-
-                if (result.success) {
-                    alert("Data berhasil diperbarui!");
-                    // Refresh halaman agar mendapatkan SysRevID terbaru
-                    window.location.reload();
-                } else {
-                    alert("Gagal Update: " + (result.message || "Kesalahan tidak diketahui"));
+                const resHeader = await updateHeaderToUD100(headerData, rawData);
+                if (!resHeader.success) {
+                    throw new Error("Gagal Update Header: " + resHeader.message);
                 }
+
+                // Siapkan Key untuk Lines dari data lama
+                currentParentKeys = {
+                    Company: rawData.Company,
+                    Key1: rawData.Key1,
+                    Key2: rawData.Key2,
+                    Key3: rawData.Key3,
+                    Key4: rawData.Key4,
+                    Key5: rawData.Key5,
+                    ShipFrom: headerData.shipFrom,
+                    ShipTo: headerData.shipTo
+                };
+                isHeaderSuccess = true;
 
             } else {
 
-                const result = await saveHeaderToUD100(headerData);
+                const resHeader = await saveHeaderToUD100(headerData);
+                if (!resHeader.success) {
+                    throw new Error("Gagal Membuat Header: " + resHeader.message);
+                }
 
-                if (result.success) {
-                    const responseData = result.data;
+                // Cari Data Record Baru dari Response Epicor
+                const responseData = resHeader.data;
+                const newRecord = responseData?.returnObj?.UD100?.[0] ||
+                                  responseData?.parameters?.ds?.UD100?.[0] ||
+                                  responseData?.ds?.UD100?.[0] ||
+                                  responseData?.UD100?.[0];
 
-                    // Logic mencari ID baru dari response Epicor yang strukturnya dinamis
-                    const newRecord = responseData?.returnObj?.UD100?.[0] ||
-                        responseData?.parameters?.ds?.UD100?.[0] ||
-                        responseData?.ds?.UD100?.[0] ||
-                        responseData?.UD100?.[0];
+                if (!newRecord || !newRecord.Key1) {
+                    throw new Error("Header tersimpan tapi gagal mengambil Key ID baru.");
+                }
 
-                    if (newRecord && newRecord.Key1) {
-                        // Update UI & URL
-                        setHeaderData(prev => ({ ...prev, packNum: newRecord.Key1 }));
-                        alert(`Berhasil dibuat! Nomor SJ: ${newRecord.Key1}`);
+                // Siapkan Key untuk Lines dari data baru
+                currentParentKeys = {
+                    Company: newRecord.Company,
+                    Key1: newRecord.Key1,
+                    Key2: newRecord.Key2,
+                    Key3: newRecord.Key3,
+                    Key4: newRecord.Key4,
+                    Key5: newRecord.Key5,
+                    ShipFrom: headerData.shipFrom,
+                    ShipTo: headerData.shipTo
+                };
+                isHeaderSuccess = true;
+            }
+            if (isHeaderSuccess && currentParentKeys && lines.length > 0) {
+                const linesToSave = lines;
 
-                        // Pindah ke mode edit
-                        router.replace(`/sjantarplant/entry?id=${newRecord.Key1}`);
-                    } else {
-                        alert("Berhasil disimpan, namun gagal membaca Nomor SJ. Silakan cek list.");
-                        router.push('/sjantarplant');
+                if (linesToSave.length > 0) {
+                    const resLines = await addLinesToUD100(currentParentKeys, linesToSave);
+                    
+                    if (!resLines.success) {
+                        alert(`Header tersimpan (SJ: ${currentParentKeys.Key1}), TAPI Gagal Simpan Barang: ${resLines.message}`);
                     }
-                } else {
-                    alert("Gagal Simpan: " + (result.message || "Kesalahan tidak diketahui"));
                 }
             }
+            alert("Simpan Berhasil!");
 
-        } catch (error) {
-            console.error("Save Error:", error);
-            alert("Terjadi kesalahan sistem client saat menyimpan.");
+            if (isEditMode) {
+                // Jika edit mode, reload untuk refresh data (termasuk lines yg baru masuk)
+                window.location.reload();
+            } else if (currentParentKeys) {
+                // Jika add mode, pindah ke halaman edit dengan ID baru
+                router.replace(`/sjantarplant/entry?id=${currentParentKeys.Key1}`);
+            }
+
+        } catch (error: unknown) { 
+            console.error("Process Error:", error);
+            
+            let msg = "Terjadi kesalahan sistem.";
+            if (error instanceof Error) {
+                msg = error.message;
+            } else if (typeof error === "string") {
+                msg = error;
+            }
+            
+            alert(msg);
         } finally {
             setIsSaving(false);
         }
@@ -194,6 +236,7 @@ export default function SJAntarPlantEntry() {
                     <LinesSection 
                         lines={lines} 
                         setLines={setLines} 
+                        shipFrom={headerData.shipFrom}
                     />
                 ) : (
                     <div className="p-8 bg-gray-50 rounded border-2 border-dashed border-gray-300 text-center text-gray-500">

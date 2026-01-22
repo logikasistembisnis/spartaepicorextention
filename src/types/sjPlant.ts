@@ -28,7 +28,20 @@ export type SjPlantLine = {
   comment: string;
   status: string;
   qrCode: string;
-  timestamp?: string;     
+  timestamp?: string;  
+  availableWarehouses?: WarehouseOption[];   
+  availableBins?: BinOption[];
+}
+
+export interface WarehouseOption {
+  code: string;
+  name: string;
+}
+
+export interface BinOption {
+  code: string; // BinNum
+  desc: string; // BinDesc
+  qty: number;  // QtyOnHand
 }
 
 export interface UD100RawData {
@@ -56,4 +69,35 @@ export interface UD100RawData {
   // Index signature untuk menangani properti Epicor lain (Character02, Number05, dll)
   // agar spread operator (...) tidak error
   [key: string]: string | number | boolean | null | undefined;
+}
+
+export interface UD100ARawData {
+  Company: string;
+  Key1: string;
+  Key2: string;
+  Key3: string;
+  Key4: string;
+  Key5: string;
+  ChildKey1: string;
+  ChildKey2: string;
+  ChildKey3: string; 
+  ChildKey4: string;
+  ChildKey5: string;
+  Character01?: string;
+  Character02?: string;
+  Character03?: string;
+  Character04?: string;
+  Character05?: string;
+  ShortChar01?: string;
+  ShortChar02?: string;
+  ShortChar03?: string;
+  ShortChar04?: string;
+  ShortChar05?: string;
+  ShortChar06?: string;
+  ShortChar09?: string;
+  ShortChar10?: string;
+  CheckBox20?: boolean;
+  Number01?: number;
+  SysRowID?: string;
+  RowMod: string;
 }

@@ -29,7 +29,7 @@ export default function ScanResultTable({ items }: ScanResultTableProps) {
                         {items.length === 0 ? (
                             <tr>
                                 <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-400 italic">
-                                    Belum ada data. Silakan scan pada kolom input di atas.
+                                    Belum ada data. Silakan isi scan pada kolom input di atas.
                                 </td>
                             </tr>
                         ) : (
