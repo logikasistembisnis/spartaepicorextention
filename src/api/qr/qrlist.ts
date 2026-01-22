@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { apiFetch } from "@/api/apiFetch";
 
 export type qrList = {
   UD14_Company: string;
@@ -29,12 +30,11 @@ type ApiResponse = {
   error?: string;
 };
 
-export async function getGeneratedQRList(): Promise<ApiResponse>  {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const apiKey = process.env.API_KEY;
+export async function getGeneratedQRList(): Promise<ApiResponse> {
+  const apiKey = process.env.NEXT_PUBLIC_API_KEY;
 
   // Pastikan API URL & Key ada
-  if (!apiUrl || !apiKey) {
+  if (!apiKey) {
     return {
       success: false,
       error: "Konfigurasi server (API URL/KEY) tidak lengkap.",
@@ -50,15 +50,12 @@ export async function getGeneratedQRList(): Promise<ApiResponse>  {
   }
 
   try {
-    const response = await fetch(
-      `${apiUrl}/v2/odata/166075/BaqSvc/UDNEL_FCQRCode/Data`,
+    const response = await apiFetch(
+      `/v2/odata/166075/BaqSvc/UDNEL_FCQRCode/Data`,
       {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          Authorization: authHeader,
-        },
+        authHeader,
+        requireLicense: true,
         cache: "no-store",
       }
     );
@@ -100,11 +97,10 @@ export async function deleteQRItem(
   key4: string = '',
   key5: string = ''
 ): Promise<{ success: boolean; message?: string }> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const apiKey = process.env.API_KEY;
+  const apiKey = process.env.NEXT_PUBLIC_API_KEY;
 
   // 1. Validasi Config
-  if (!apiUrl || !apiKey) {
+  if (!apiKey) {
     return {
       success: false,
       // FIX: Ganti 'error' jadi 'message' agar sesuai tipe return
@@ -114,9 +110,9 @@ export async function deleteQRItem(
 
   // 2. Validasi Auth
   const cookieStore = await cookies();
-  const authSession = cookieStore.get("session_auth")?.value;
+  const authHeader = cookieStore.get("session_auth")?.value;
 
-  if (!authSession) {
+  if (!authHeader) {
     return { success: false, message: "Unauthorized: Silakan login ulang." };
   }
 
@@ -124,33 +120,30 @@ export async function deleteQRItem(
     // 3. Payload untuk DeleteByID harus Object JSON, bukan string OData
     // Nama key (key1, key2, dst) harus match dengan parameter method Epicor
     const payload = {
-        key1: key1,
-        key2: key2,
-        key3: key3,
-        key4: key4,
-        key5: key5
+      key1: key1,
+      key2: key2,
+      key3: key3,
+      key4: key4,
+      key5: key5
     };
 
     // 4. Panggil Endpoint DeleteByID
     // Penting: Method biasanya POST untuk RPC call di Epicor REST v1
-    const response = await fetch(`${apiUrl}/v1/Ice.BO.UD14Svc/DeleteByID`, {
-      method: 'POST', 
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        Authorization: authSession,
-      },
+    const response = await apiFetch(`/v1/Ice.BO.UD14Svc/DeleteByID`, {
+      method: 'POST',
+      authHeader,
+      requireLicense: true,
       body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
       const errorData = await response.json() as unknown;
       let serverMsg = "Gagal menghapus data";
-      
+
       if (typeof errorData === 'object' && errorData !== null && 'ErrorMessage' in errorData) {
         serverMsg = (errorData as { ErrorMessage: string }).ErrorMessage;
       }
-      
+
       throw new Error(serverMsg);
     }
 

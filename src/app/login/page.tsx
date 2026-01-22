@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useEffect, useState } from 'react'
-import { loginAction } from '../../api/login'
+import { loginAction } from '../../api/auth/login'
 import { useRouter } from 'next/navigation'
 
 import { UserCircleIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'

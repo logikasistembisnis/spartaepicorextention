@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { TrashIcon, PlusIcon, PrinterIcon, ArrowPathIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
 import AddNew from '@/components/modals/qrgen/AddNew'
-import { getGeneratedQRList, qrList, deleteQRItem } from '@/api/qrlist'
-import { updateUD14, UpdateUD14Item } from '@/api/updateqrcode'
+import { getGeneratedQRList, qrList, deleteQRItem } from '@/api/qr/qrlist'
+import { updateUD14, UpdateUD14Item } from '@/api/qr/updateqrcode'
 import QRCode from 'qrcode';
 import { pdf } from '@react-pdf/renderer'
 import { QrPdfDocument, QrPdfItem } from '@/components/pdf/QrPdfDocument'

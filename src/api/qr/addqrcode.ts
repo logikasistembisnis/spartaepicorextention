@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { apiFetch } from "@/api/apiFetch";
 
 // Tipe data input dari Client
 type SavePartItem = {
@@ -12,10 +13,9 @@ type SavePartItem = {
 };
 
 export async function saveToUD14(items: SavePartItem[]) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const apiKey = process.env.API_KEY;
   // Pastikan API URL & Key ada
-  if (!apiUrl || !apiKey) {
+  if (!apiKey) {
     return {
       success: false,
       error: "Konfigurasi server (API URL/KEY) tidak lengkap.",
@@ -24,9 +24,9 @@ export async function saveToUD14(items: SavePartItem[]) {
 
   // Ambil Session Auth dari Cookies
   const cookieStore = await cookies();
-  const authSession = cookieStore.get("session_auth")?.value;
+  const authHeader = cookieStore.get("session_auth")?.value;
 
-  if (!authSession) {
+  if (!authHeader) {
     return { success: false, message: "Unauthorized: Silakan login ulang." };
   }
 
@@ -34,7 +34,7 @@ export async function saveToUD14(items: SavePartItem[]) {
   let username = "";
   try {
     // Format Basic Auth adalah "Basic base64(user:pass)"
-    const base64Credentials = authSession.split(" ")[1];
+    const base64Credentials = authHeader.split(" ")[1];
     const credentials = Buffer.from(base64Credentials, "base64").toString(
       "ascii"
     );
@@ -86,13 +86,10 @@ export async function saveToUD14(items: SavePartItem[]) {
 
   // Kirim ke API Epicor
   try {
-    const response = await fetch(`${apiUrl}/v1/Ice.BO.UD14Svc/Update`, {
+    const response = await apiFetch(`/v1/Ice.BO.UD14Svc/Update`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        Authorization: authSession,
-      },
+      authHeader,
+      requireLicense: true,
       body: JSON.stringify(payload),
     });
 
