@@ -79,7 +79,7 @@ export async function addLinesToUD100(
 
         Character01: line.qrCode,
         Character02: line.partDesc,
-        Character03: line.sysRowId, // GUID Scan
+        Character03: line.guid, // GUID Scan
 
         ShortChar01: line.partNum,
         ShortChar02: line.lotNum,

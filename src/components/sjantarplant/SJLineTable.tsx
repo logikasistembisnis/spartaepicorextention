@@ -14,7 +14,7 @@ export default function SJLineTable({ lines, setLines }: SJLineTableProps) {
     // Fungsi update data per baris (misal ganti Warehouse / Qty manual)
     const updateLineState = (id: string, field: keyof SjPlantLine, value: string | number) => {
         setLines((prevLines) => prevLines.map(line => {
-            if (line.sysRowId === id) {
+            if (line.guid === id) {
                 return { ...line, [field]: value }
             }
             return line
@@ -23,12 +23,12 @@ export default function SJLineTable({ lines, setLines }: SJLineTableProps) {
 
     const handleWarehouseChange = async (id: string, newWhseCode: string) => {
         // 1. Cari baris yang sedang diedit untuk ambil PartNum & LotNum
-        const currentLine = lines.find(l => l.sysRowId === id);
+        const currentLine = lines.find(l => l.guid === id);
         if (!currentLine) return;
 
         // 2. Update Warehouse Code dulu di UI (biar responsif), dan kosongkan BinNum
         setLines(prev => prev.map(line => {
-            if (line.sysRowId === id) {
+            if (line.guid === id) {
                 return { ...line, warehouseCode: newWhseCode, binNum: '', availableBins: [] }
             }
             return line;
@@ -49,7 +49,7 @@ export default function SJLineTable({ lines, setLines }: SJLineTableProps) {
             }));
 
             setLines(prev => prev.map(line => {
-                if (line.sysRowId === id) {
+                if (line.guid === id) {
                     return {
                         ...line,
                         availableBins: newBinOptions,
@@ -97,7 +97,7 @@ export default function SJLineTable({ lines, setLines }: SJLineTableProps) {
                             </tr>
                         ) : (
                             lines.map((line, idx) => (
-                                <tr key={line.sysRowId} className="hover:bg-blue-50 transition-colors">
+                                <tr key={line.guid} className="hover:bg-blue-50 transition-colors">
                                     {/* 1. Line (Auto numbering based on array index for display) */}
                                     <td className="px-2 py-2 text-center text-xs text-gray-500">
                                         {lines.length - idx}
@@ -140,7 +140,7 @@ export default function SJLineTable({ lines, setLines }: SJLineTableProps) {
                                     <td className="px-2 py-2">
                                         <select
                                             value={line.warehouseCode}
-                                            onChange={(e) => handleWarehouseChange(line.sysRowId, e.target.value)}
+                                            onChange={(e) => handleWarehouseChange(line.guid, e.target.value)}
                                             className={selectClass}
                                             title={line.warehouseCode}
                                         >
@@ -173,7 +173,7 @@ export default function SJLineTable({ lines, setLines }: SJLineTableProps) {
                                     <td className="px-2 py-2">
                                         <select
                                             value={line.binNum}
-                                            onChange={(e) => updateLineState(line.sysRowId, 'binNum', e.target.value)}
+                                            onChange={(e) => updateLineState(line.guid, 'binNum', e.target.value)}
                                             className={selectClass}
                                             // Disable jika belum pilih gudang atau bins kosong
                                             disabled={!line.warehouseCode || !line.availableBins?.length}
@@ -199,7 +199,7 @@ export default function SJLineTable({ lines, setLines }: SJLineTableProps) {
                                         <input
                                             type="number"
                                             value={line.qty}
-                                            onChange={(e) => updateLineState(line.sysRowId, 'qty', parseFloat(e.target.value) || 0)}
+                                            onChange={(e) => updateLineState(line.guid, 'qty', parseFloat(e.target.value) || 0)}
                                             className={`${readOnlyClass} text-center`}
                                         />
                                     </td>
@@ -209,7 +209,7 @@ export default function SJLineTable({ lines, setLines }: SJLineTableProps) {
                                         <input
                                             type="text"
                                             value={line.comment}
-                                            onChange={(e) => updateLineState(line.sysRowId, 'comment', e.target.value)}
+                                            onChange={(e) => updateLineState(line.guid, 'comment', e.target.value)}
                                             className={inputClass}
                                             placeholder="..."
                                         />

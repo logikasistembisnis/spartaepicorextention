@@ -16,7 +16,7 @@ export type SjPlantHeader = {
 }
 
 export type SjPlantLine = {
-  sysRowId: string;       // Ini pengganti GUID
+  guid: string;
   lineNum: number;
   partNum: string;
   partDesc: string;
@@ -31,6 +31,8 @@ export type SjPlantLine = {
   timestamp?: string;  
   availableWarehouses?: WarehouseOption[];   
   availableBins?: BinOption[];
+  rawData?: UD100ARawData;
+  pendingLogs?: SjPlantLine[];
 }
 
 export interface WarehouseOption {

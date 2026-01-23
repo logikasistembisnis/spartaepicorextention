@@ -12,6 +12,7 @@ import { saveHeaderToUD100 } from '@/api/sjplant/addheader'
 import { getHeaderById } from '@/api/sjplant/getbyid'
 import { updateHeaderToUD100 } from '@/api/sjplant/updateheader'
 import { addLinesToUD100, ParentKeys } from '@/api/sjplant/addlines';
+import { updateLineToUD100A } from '@/api/sjplant/updateline';
 
 function EntryContent() {
     const router = useRouter()
@@ -96,7 +97,6 @@ function EntryContent() {
         try {
             const isEditMode = !!packNumParam && !!rawData;
             let currentParentKeys: ParentKeys | null = null;
-            let isHeaderSuccess = false;
 
             if (isEditMode) {
                 if (!rawData) {
@@ -121,10 +121,7 @@ function EntryContent() {
                     ShipFrom: headerData.shipFrom,
                     ShipTo: headerData.shipTo
                 };
-                isHeaderSuccess = true;
-
             } else {
-
                 const resHeader = await saveHeaderToUD100(headerData);
                 if (!resHeader.success) {
                     throw new Error("Gagal Membuat Header: " + resHeader.message);
@@ -152,20 +149,47 @@ function EntryContent() {
                     ShipFrom: headerData.shipFrom,
                     ShipTo: headerData.shipTo
                 };
-                isHeaderSuccess = true;
             }
-            if (isHeaderSuccess && currentParentKeys && lines.length > 0) {
-                const linesToSave = lines;
+            if (currentParentKeys && lines.length > 0) {
 
-                if (linesToSave.length > 0) {
-                    const resLines = await addLinesToUD100(currentParentKeys, linesToSave);
+                const newLines = lines.filter(l => !l.rawData);
+                const existingLines = lines.filter(l => !!l.rawData);
 
-                    if (!resLines.success) {
-                        alert(`Header tersimpan (SJ: ${currentParentKeys.Key1}), TAPI Gagal Simpan Barang: ${resLines.message}`);
+                const errorMessages: string[] = [];
+
+                // 2. Add New Lines (Batch)
+                if (newLines.length > 0) {
+                    const resAddLines = await addLinesToUD100(currentParentKeys, newLines);
+                    if (!resAddLines.success) {
+                        errorMessages.push(`Gagal tambah barang baru: ${resAddLines.message}`);
                     }
                 }
+
+                // 3. Update Existing Lines (Looping)
+                if (existingLines.length > 0) {
+                    // Gunakan Promise.all agar update berjalan paralel (lebih cepat)
+                    const updatePromises = existingLines.map(line =>
+                        updateLineToUD100A(line, line.rawData!)
+                    );
+
+                    const results = await Promise.all(updatePromises);
+
+                    // Cek jika ada yang gagal
+                    const failed = results.filter(r => !r.success);
+                    if (failed.length > 0) {
+                        errorMessages.push(`Gagal update ${failed.length} baris barang.`);
+                    }
+                }
+
+                if (errorMessages.length > 0) {
+                    alert(`Header tersimpan, tapi ada masalah di Lines:\n${errorMessages.join('\n')}`);
+                } else {
+                    alert("Simpan Berhasil!");
+                }
+            } else {
+                // Header sukses, lines kosong
+                alert("Simpan Berhasil!");
             }
-            alert("Simpan Berhasil!");
 
             if (isEditMode) {
                 // Jika edit mode, reload untuk refresh data (termasuk lines yg baru masuk)
@@ -252,9 +276,9 @@ function EntryContent() {
 }
 
 export default function SJAntarPlantEntryPage() {
-  return (
-    <Suspense fallback={<div className="p-10 text-center">Loading Page...</div>}>
-      <EntryContent />
-    </Suspense>
-  );
+    return (
+        <Suspense fallback={<div className="p-10 text-center">Loading Page...</div>}>
+            <EntryContent />
+        </Suspense>
+    );
 }

@@ -1,13 +1,25 @@
 'use client'
 
-import { Dispatch, SetStateAction } from 'react'
-import { SjPlantLine } from '@/types/sjPlant' 
-import ScanInput from './ScanInput' 
-import ScanResultTable from './ScanResultTable' 
+import { Dispatch, SetStateAction, useState, useEffect, useRef } from 'react'
+import { SjPlantLine } from '@/types/sjPlant'
+import ScanInput from './ScanInput'
+import ScanResultTable from './ScanResultTable'
 import SJLineTable from './SJLineTable'
 import { getPartIum } from '@/api/sjplant/ium'
 import { getPartWarehouseList } from '@/api/sjplant/whse'
 import { getPartBinList } from '@/api/sjplant/bin'
+
+const generateId = () => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID(); // Modern browser
+    }
+    // Fallback untuk browser lama
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
 
 interface LinesSectionProps {
     lines: SjPlantLine[];
@@ -16,6 +28,20 @@ interface LinesSectionProps {
 }
 
 export default function LinesSection({ lines, setLines, shipFrom }: LinesSectionProps) {
+    const [scanHistory, setScanHistory] = useState<SjPlantLine[]>([]);
+
+    const hasInitialized = useRef(false);
+    useEffect(() => {
+        if (!hasInitialized.current && lines.length > 0) {
+            const timer = setTimeout(() => {
+                setScanHistory(lines);
+                hasInitialized.current = true;
+            }, 0);
+
+            // Cleanup function (Best Practice)
+            return () => clearTimeout(timer);
+        }
+    }, [lines]);
 
     // --- LOGIC UTAMA: Parsing Data ---
     const handleProcessScan = async (rawValue: string) => {
@@ -46,11 +72,11 @@ export default function LinesSection({ lines, setLines, shipFrom }: LinesSection
         // Pastikan Ship From ada isinya sebelum panggil API
         if (shipFrom) {
             const resWh = await getPartWarehouseList(partNum, shipFrom);
-            
+
             if (resWh.success && resWh.data) {
                 // Mapping hasil API ke format yang mudah dibaca dropdown
                 fetchedWhOptions = resWh.data.map(item => ({
-                    code: item.PartWhse_WarehouseCode, 
+                    code: item.PartWhse_WarehouseCode,
                     name: item.Warehse_Description
                 }));
                 if (fetchedWhOptions.length === 1) {
@@ -64,7 +90,7 @@ export default function LinesSection({ lines, setLines, shipFrom }: LinesSection
 
         if (defaultWh) {
             const resBin = await getPartBinList(partNum, defaultWh, lotNum);
-            
+
             if (resBin.success && resBin.data) {
                 fetchedBinOptions = resBin.data.map(b => ({
                     code: b.BinNum,
@@ -79,7 +105,7 @@ export default function LinesSection({ lines, setLines, shipFrom }: LinesSection
             }
         }
 
-        let fetchedUom = '...'; 
+        let fetchedUom = '...';
         try {
             const res = await getPartIum(partNum);
             if (res.success && res.ium) {
@@ -92,27 +118,69 @@ export default function LinesSection({ lines, setLines, shipFrom }: LinesSection
             fetchedUom = 'ERR';
         }
 
-        // Buat Object sesuai tipe SjPlantLine (Tipe data Parent)
-        const newLine: SjPlantLine = {
-            sysRowId: guidFromQr,             
-            lineNum: lines.length + 1,      // Generate No Urut
-            partNum: partNum,
-            partDesc: partDesc,
-            lotNum: lotNum,
-            qty: qty,
-            uom: fetchedUom, 
-            warehouseCode: defaultWh, 
+        const maxLineNum = lines.reduce((max, item) => {
+            // Cek line utama
+            let currentMax = item.lineNum > max ? item.lineNum : max;
+
+            // Cek juga jika di dalam line itu ada pendingLogs yang mungkin punya nomor lebih besar
+            if (item.pendingLogs) {
+                item.pendingLogs.forEach(log => {
+                    if (log.lineNum > currentMax) currentMax = log.lineNum;
+                });
+            }
+            return currentMax;
+        }, 0);
+
+        const nextLineNum = maxLineNum + 1;
+
+        const newLogEntry: SjPlantLine = {
+            guid: guidFromQr || generateId(), // Pastikan ada ID unik
+            lineNum: nextLineNum, // Nanti diset saat display
+            partNum,
+            partDesc,
+            lotNum,
+            qty, // Ini Qty pecahan (misal 3)
+            uom: fetchedUom,
+            warehouseCode: defaultWh,
             availableWarehouses: fetchedWhOptions,
             binNum: defaultBin,
             availableBins: fetchedBinOptions,
-            status: 'OPEN',
+            status: 'LOG',
             comment: '',
-            qrCode: rawValue,   // Simpan raw QR
+            qrCode: rawValue,
             timestamp: timestampFromQr
         };
 
-        // 3. Update State milik Parent
+        // --- PERUBAHAN 2: LOGIC DUPLIKAT ---
+        const existingLineIndex = lines.findIndex(l => l.partNum === partNum && l.lotNum === lotNum);
+
+        if (existingLineIndex !== -1) {
+            // Jika BARANG SUDAH ADA
+            setLines(prevLines => prevLines.map((line) => {
+                if (line.partNum === partNum && line.lotNum === lotNum) {
+                    return {
+                        ...line,
+                        qty: line.qty + qty,
+                        pendingLogs: [...(line.pendingLogs || []), newLogEntry]
+                    };
+                }
+                return line;
+            }));
+
+            // Update tabel History (Bagian Bawah)
+            setScanHistory(prev => [{ ...newLogEntry, lineNum: scanHistory.length + 1 }, ...prev]);
+
+            return; // STOP DISINI
+        }
+
+        const newLine: SjPlantLine = {
+            ...newLogEntry,
+            lineNum: lines.length + 1, // Beri nomor urut baru
+            status: 'UNSHIP',
+        };
+
         setLines(prev => [newLine, ...prev]);
+        setScanHistory(prev => [newLine, ...prev]); // Masukkan history juga
     };
 
     return (
@@ -126,7 +194,7 @@ export default function LinesSection({ lines, setLines, shipFrom }: LinesSection
             <SJLineTable lines={lines} setLines={setLines} />
 
             {/* BAGIAN 3: GRID HASIL PARSING */}
-            <ScanResultTable items={lines} />
+            <ScanResultTable items={scanHistory} />
         </div>
     )
 }

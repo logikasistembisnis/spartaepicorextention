@@ -1,7 +1,14 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { SjPlantHeader, UD100RawData, SjPlantLine, UD100ARawData, WarehouseOption, BinOption } from "@/types/sjPlant";
+import {
+  SjPlantHeader,
+  UD100RawData,
+  SjPlantLine,
+  UD100ARawData,
+  WarehouseOption,
+  BinOption,
+} from "@/types/sjPlant";
 import { apiFetch } from "@/api/apiFetch";
 import { getPartWarehouseList } from "@/api/sjplant/whse";
 import { getPartBinList } from "@/api/sjplant/bin";
@@ -79,22 +86,18 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
     const ud100aList = (result.returnObj.UD100A || []) as UD100ARawData[];
 
     // 1. Pisahkan record
-    const lineRecords = ud100aList.filter(
-      (r) => r.ChildKey5 === "SJPlant"
-    );
+    const lineRecords = ud100aList.filter((r) => r.ChildKey5 === "SJPlant");
 
     const qrRecords = ud100aList.filter(
-      (r) => r.ChildKey5 === "SJPlant#QRCode"
+      (r) => r.ChildKey5 === "SJPlant#QRCode",
     );
 
     // 2. Initial Mapping ke SjPlantLine
     const initialLines: SjPlantLine[] = lineRecords.map((line) => {
-      const qr = qrRecords.find(
-        (q) => q.ChildKey1 === line.ChildKey1
-      );
+      const qr = qrRecords.find((q) => q.ChildKey1 === line.ChildKey1);
 
       return {
-        sysRowId: qr?.Character03 || line.SysRowID || "", // GUID
+        guid: qr?.Character03 || line.SysRowID || "", // GUID
         lineNum: Number(line.ChildKey1),
         partNum: line.ShortChar01 || "",
         partDesc: line.Character01 || "",
@@ -104,64 +107,70 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
         binNum: line.ShortChar05 || "",
         qty: Number(line.Number01) || 0,
         comment: line.ShortChar06 || "",
-        status: "OPEN",
+        status: "UNSHIP",
         qrCode: qr?.Character01 || "",
         timestamp: qr?.ShortChar03,
         // Array kosong dulu, nanti diisi di langkah enrichment
         availableWarehouses: [],
         availableBins: [],
+        rawData: line,
       };
     });
 
     const enrichedLines = await Promise.all(
       initialLines.map(async (line) => {
-
         let whOptions: WarehouseOption[] = [];
         let binOptions: BinOption[] = [];
 
         // A. FETCH WAREHOUSE LIST
         if (line.partNum && headerData.shipFrom) {
-          const whRes = await getPartWarehouseList(line.partNum, headerData.shipFrom);
+          const whRes = await getPartWarehouseList(
+            line.partNum,
+            headerData.shipFrom,
+          );
 
           if (whRes.success && whRes.data) {
             // Mapping dari ApiWarehouse ke WarehouseOption
-            whOptions = whRes.data.map(w => ({
+            whOptions = whRes.data.map((w) => ({
               code: w.PartWhse_WarehouseCode,
-              name: w.Warehse_Description
+              name: w.Warehse_Description,
             }));
           }
         }
 
         // B. FETCH BIN LIST
         if (line.partNum && line.warehouseCode) {
-          
-          const binRes = await getPartBinList(line.partNum, line.warehouseCode, ""); 
+          const binRes = await getPartBinList(
+            line.partNum,
+            line.warehouseCode,
+            "",
+          );
 
           const rawBins = binRes.success && binRes.data ? binRes.data : [];
 
           if (line.binNum) {
-             const isBinExist = rawBins.some(b => b.BinNum === line.binNum);
-             
-             if (!isBinExist) {
-                rawBins.push({
-                   BinNum: line.binNum,
-                   BinDesc: `${line.binNum} (Current)`, // Penanda visual
-                   QtyOnHand: 0 // Asumsi 0 jika tidak ada di list search
-                });
-             }
+            const isBinExist = rawBins.some((b) => b.BinNum === line.binNum);
+
+            if (!isBinExist) {
+              rawBins.push({
+                BinNum: line.binNum,
+                BinDesc: `${line.binNum} (Current)`, // Penanda visual
+                QtyOnHand: 0, // Asumsi 0 jika tidak ada di list search
+              });
+            }
           }
 
           const uniqueBins = new Map();
-          rawBins.forEach(b => {
-              if(!uniqueBins.has(b.BinNum)){
-                  uniqueBins.set(b.BinNum, {
-                      code: b.BinNum,
-                      desc: b.BinDesc,
-                      qty: b.QtyOnHand
-                  });
-              }
+          rawBins.forEach((b) => {
+            if (!uniqueBins.has(b.BinNum)) {
+              uniqueBins.set(b.BinNum, {
+                code: b.BinNum,
+                desc: b.BinDesc,
+                qty: b.QtyOnHand,
+              });
+            }
           });
-          
+
           binOptions = Array.from(uniqueBins.values());
         }
 
@@ -169,9 +178,9 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
         return {
           ...line,
           availableWarehouses: whOptions,
-          availableBins: binOptions
+          availableBins: binOptions,
         };
-      })
+      }),
     );
 
     return {
