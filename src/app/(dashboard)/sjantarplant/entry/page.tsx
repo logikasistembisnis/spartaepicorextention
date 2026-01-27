@@ -13,6 +13,7 @@ import { getHeaderById } from '@/api/sjplant/getbyid'
 import { updateHeaderToUD100 } from '@/api/sjplant/updateheader'
 import { addLinesToUD100, ParentKeys } from '@/api/sjplant/addlines';
 import { updateLineToUD100A } from '@/api/sjplant/updateline';
+import { checkGuidExists } from "@/api/sjplant/checkguid";
 
 function EntryContent() {
     const router = useRouter()
@@ -166,6 +167,26 @@ function EntryContent() {
                     const relevantLogs = logs.filter(
                         log => log.isNew && newLines.some(nl => nl.lineNum === log.lineNum)
                     );
+
+                    // Kumpulin semua GUID baru
+                    const newGuids = logs
+                        .filter(l => l.isNew && l.guid)
+                        .map(l => l.guid);
+
+                    // Cek satu-satu 
+                    for (const guid of newGuids) {
+                        const check = await checkGuidExists(guid);
+
+                        if (!check.success) {
+                            alert("Gagal validasi GUID");
+                            return;
+                        }
+
+                        if (check.exists) {
+                            alert(`QR Code dengan GUID ${guid} sudah pernah discan!`);
+                            return; // STOP TOTAL
+                        }
+                    }
 
                     const resAddLines = await addLinesToUD100(currentParentKeys, newLines, relevantLogs);
                     if (!resAddLines.success) {
