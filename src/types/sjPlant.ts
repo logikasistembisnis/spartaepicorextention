@@ -16,7 +16,6 @@ export type SjPlantHeader = {
 }
 
 export type SjPlantLine = {
-  guid: string;
   lineNum: number;
   partNum: string;
   partDesc: string;
@@ -27,12 +26,24 @@ export type SjPlantLine = {
   qty: number;
   comment: string;
   status: string;
-  qrCode: string;
-  timestamp?: string;  
   availableWarehouses?: WarehouseOption[];   
   availableBins?: BinOption[];
   rawData?: UD100ARawData;
-  pendingLogs?: SjPlantLine[];
+  pendingLogs?: SjScanLog[];
+}
+
+export interface SjScanLog {
+  logNum: number;
+  lineNum: number;
+  partNum: string;
+  partDesc: string;
+  lotNum: string;
+  qty: number;        // Qty per scan (bukan total)
+  qrCode: string;     // Raw String QR
+  guid: string;       // GUID unik dari QR
+  timestamp: string;  // Waktu scan
+  status: string;
+  isNew?: boolean;
 }
 
 export interface WarehouseOption {

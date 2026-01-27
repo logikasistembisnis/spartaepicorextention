@@ -100,8 +100,8 @@ export async function saveHeaderToUD100(header: SjPlantHeader) {
         Key3: "",
         Key4: "",
         Key5: "SJPlant",
-        ShortChar01: header.shipFrom,
-        ShortChar02: header.shipTo,
+        ShortChar02: header.shipFrom,
+        ShortChar01: header.shipTo,
         ShortChar06: "OPEN",
         ShortChar10: username,
         Date01: header.actualShipDate

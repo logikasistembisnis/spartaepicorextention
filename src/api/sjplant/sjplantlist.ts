@@ -14,7 +14,8 @@ export type SJItem = {
 interface EpicorBaqRow {
   UD100_Key1: string; // Pack Number
   UD100_Date01: string | null; // Actual Ship Date
-  UD100_ShortChar02: string | null; // Ship To
+  UD100_ShortChar02: string | null; // Ship From
+  UD100_ShortChar01: string | null; // Ship To
   UD100_ShortChar06: string | null; // Status
 }
 
@@ -70,7 +71,7 @@ export async function getSJList(): Promise<ActionResponse> {
         id: item.UD100_Key1,
         packNumber: item.UD100_Key1,
         actualShipDate: formattedDate,
-        shipTo: item.UD100_ShortChar02 || "-",
+        shipTo: item.UD100_ShortChar01 || "-",
         status: item.UD100_ShortChar06 || "OPEN",
       };
     });

@@ -1,8 +1,8 @@
 'use client'
-import { SjPlantLine } from '@/types/sjPlant'
+import { SjScanLog } from '@/types/sjPlant'
 
 interface ScanResultTableProps {
-    items: SjPlantLine[];
+    items: SjScanLog[];
 }
 export default function ScanResultTable({ items }: ScanResultTableProps) {
     return (

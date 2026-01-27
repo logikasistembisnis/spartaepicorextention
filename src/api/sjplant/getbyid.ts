@@ -8,6 +8,7 @@ import {
   UD100ARawData,
   WarehouseOption,
   BinOption,
+  SjScanLog,
 } from "@/types/sjPlant";
 import { apiFetch } from "@/api/apiFetch";
 import { getPartWarehouseList } from "@/api/sjplant/whse";
@@ -19,6 +20,7 @@ type GetHeaderResult = {
   data?: SjPlantHeader;
   rawData?: UD100RawData;
   lines?: SjPlantLine[];
+  logs?: SjScanLog[];
 };
 
 export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
@@ -67,8 +69,8 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
     // --- MAPPING DATA ---
     const headerData: SjPlantHeader = {
       packNum: raw.Key1,
-      shipFrom: raw.ShortChar01 || "",
-      shipTo: raw.ShortChar02 || "",
+      shipFrom: raw.ShortChar02 || "",
+      shipTo: raw.ShortChar01 || "",
       // Date01: "2026-01-19T00:00:00" -> ambil tanggalnya saja
       actualShipDate: raw.Date01 ? raw.Date01.split("T")[0] : "",
       isTgp: raw.CheckBox05 || false,
@@ -85,19 +87,27 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
 
     const ud100aList = (result.returnObj.UD100A || []) as UD100ARawData[];
 
-    // 1. Pisahkan record
+    // 3. PISAHKAN BERDASARKAN CHILDKEY5
     const lineRecords = ud100aList.filter((r) => r.ChildKey5 === "SJPlant");
+    const logRecords = ud100aList.filter((r) => r.ChildKey5 === "SJPlant#QRCode");
 
-    const qrRecords = ud100aList.filter(
-      (r) => r.ChildKey5 === "SJPlant#QRCode",
-    );
+    const scanLogs: SjScanLog[] = logRecords.map((log) => ({
+      guid: log.Character03 || "",
+      logNum: Number(log.ChildKey1),
+      lineNum: Number(log.ChildKey2),
+      partNum: log.ShortChar01 || "",
+      partDesc: log.Character02 || "",
+      lotNum: log.ShortChar02 || "",
+      qty: Number(log.Number01) || 0,
+      qrCode: log.Character01 || "",
+      timestamp: log.ShortChar03 || "",
+      status: "UNSHIP",
+      isNew: false,
+    }));
 
-    // 2. Initial Mapping ke SjPlantLine
+
     const initialLines: SjPlantLine[] = lineRecords.map((line) => {
-      const qr = qrRecords.find((q) => q.ChildKey1 === line.ChildKey1);
-
       return {
-        guid: qr?.Character03 || line.SysRowID || "", // GUID
         lineNum: Number(line.ChildKey1),
         partNum: line.ShortChar01 || "",
         partDesc: line.Character01 || "",
@@ -108,9 +118,6 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
         qty: Number(line.Number01) || 0,
         comment: line.ShortChar06 || "",
         status: "UNSHIP",
-        qrCode: qr?.Character01 || "",
-        timestamp: qr?.ShortChar03,
-        // Array kosong dulu, nanti diisi di langkah enrichment
         availableWarehouses: [],
         availableBins: [],
         rawData: line,
@@ -123,10 +130,10 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
         let binOptions: BinOption[] = [];
 
         // A. FETCH WAREHOUSE LIST
-        if (line.partNum && headerData.shipFrom) {
+        if (line.partNum && headerData.shipTo) {
           const whRes = await getPartWarehouseList(
             line.partNum,
-            headerData.shipFrom,
+            headerData.shipTo,
           );
 
           if (whRes.success && whRes.data) {
@@ -188,6 +195,7 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
       data: headerData,
       rawData: raw,
       lines: enrichedLines.sort((a, b) => b.lineNum - a.lineNum),
+      logs: scanLogs,
     };
   } catch (error) {
     console.error("Get Header Error:", error);

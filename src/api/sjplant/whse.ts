@@ -8,7 +8,7 @@ export type ApiWarehouse = {
   PartWhse_PartNum: string;
   PartWhse_WarehouseCode: string; // Ini yang akan jadi value dropdown
   Warehse_Description: string; // Ini yang akan jadi label dropdown
-  Warehse_Address3: string; // Ini filter Ship From
+  Warehse_Address3: string; // Ini filter Ship To
   RowIdent: string;
 };
 
@@ -26,7 +26,7 @@ type ApiResponse = {
 // Fungsi menerima parameter PartNum & ShipFrom untuk filtering
 export async function getPartWarehouseList(
   partNum: string,
-  shipFrom: string,
+  shipTo: string,
 ): Promise<ApiResponse> {
   const cookieStore = await cookies();
   const authHeader = cookieStore.get("session_auth")?.value;
@@ -38,7 +38,7 @@ export async function getPartWarehouseList(
   try {
     // Encode parameter agar aman (menangani spasi atau karakter khusus)
     const encodedPart = encodeURIComponent(partNum);
-    const encodedShipFrom = encodeURIComponent(shipFrom);
+    const encodedShipFrom = encodeURIComponent(shipTo);
 
     // Buat Query OData:
     // Filter dimana PartWhse_PartNum == inputPart DAN Warehse_Address3 == inputShipFrom

@@ -1,10 +1,9 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { SjPlantLine, UD100ARawData } from "@/types/sjPlant";
+import { SjPlantLine, UD100ARawData, SjScanLog } from "@/types/sjPlant";
 import { apiFetch } from "@/api/apiFetch";
 
-// Kita butuh Key1 - Key5 untuk tahu Induknya siapa
 export type ParentKeys = {
   Company: string;
   Key1: string;
@@ -16,9 +15,11 @@ export type ParentKeys = {
   ShipTo: string;
 };
 
+// Fungsi menerima Lines (Agregat) DAN ScanLogs (History)
 export async function addLinesToUD100(
   parentKeys: ParentKeys,
   lines: SjPlantLine[],
+  scanLogs: SjScanLog[]
 ) {
   const cookieStore = await cookies();
   const authHeader = cookieStore.get("session_auth")?.value;
@@ -28,42 +29,13 @@ export async function addLinesToUD100(
   try {
     const ud100aList: UD100ARawData[] = [];
 
+    // 1. MAPPING TYPE 1: SJ LINE TABLE (Data Agregat/Baris Surat Jalan)
     lines.forEach((line) => {
       const validQty = Number(line.qty) || 0;
       const lineNumStr = line.lineNum.toString();
 
-      // --- RECORD 1: DATA FISIK (Tampilan Table) ---
       ud100aList.push({
-        Company: parentKeys.Company,
-        Key1: parentKeys.Key1,
-        Key2: parentKeys.Key2,
-        Key3: parentKeys.Key3,
-        Key4: parentKeys.Key4,
-        Key5: parentKeys.Key5, // Link ke Parent
-
-        ChildKey1: lineNumStr,
-        ChildKey2: "",
-        ChildKey3: "",
-        ChildKey4: "",
-        ChildKey5: parentKeys.Key5, // Penanda Tipe Data Baris
-
-        Character01: line.partDesc,
-        Number01: validQty,
-
-        ShortChar01: line.partNum,
-        ShortChar02: line.uom,
-        ShortChar03: line.warehouseCode,
-        ShortChar04: line.lotNum,
-        ShortChar05: line.binNum,
-        ShortChar06: line.comment,
-        ShortChar09: parentKeys.ShipTo,
-        ShortChar10: parentKeys.ShipFrom,
-        CheckBox20: true,
-        RowMod: "A", // Add Baru
-      });
-
-      // --- RECORD 2: LOG QR CODE (Hidden) ---
-      ud100aList.push({
+        // Parent Keys (Link ke Header UD100)
         Company: parentKeys.Company,
         Key1: parentKeys.Key1,
         Key2: parentKeys.Key2,
@@ -71,20 +43,62 @@ export async function addLinesToUD100(
         Key4: parentKeys.Key4,
         Key5: parentKeys.Key5,
 
-        ChildKey1: lineNumStr,
+        // Identifier Tipe Data
+        ChildKey1: lineNumStr,       // Nomor Baris
         ChildKey2: "",
         ChildKey3: "",
         ChildKey4: "",
-        ChildKey5: "SJPlant#QRCode", // Penanda Tipe QR
+        ChildKey5: "SJPlant",        // PENANDA: TIPE LINE TABLE
 
-        Character01: line.qrCode,
-        Character02: line.partDesc,
-        Character03: line.guid, // GUID Scan
+        // Data Fields
+        Character01: line.partDesc,  // Part Desc
+        Number01: validQty,          // Total Qty Baris Ini
 
-        ShortChar01: line.partNum,
-        ShortChar02: line.lotNum,
-        ShortChar03: line.timestamp,
-        Number01: validQty,
+        ShortChar01: line.partNum,   // Part Num
+        ShortChar02: line.uom,       // IUM
+        ShortChar03: line.warehouseCode, // Wh From
+        ShortChar04: line.lotNum,    // Lot Num
+        ShortChar05: line.binNum,    // Bin From
+        ShortChar06: line.comment,   // Keterangan
+        ShortChar09: parentKeys.ShipTo,
+        ShortChar10: parentKeys.ShipFrom,
+
+        CheckBox20: true, // Flag aktif/valid
+        RowMod: "A",      // Add Baru
+      });
+    });
+
+    // 2. MAPPING TYPE 2: SCAN RESULT TABLE (Log History Scan)
+    scanLogs.forEach((log) => {
+      const validQty = Number(log.qty) || 0;
+
+      ud100aList.push({
+        // Parent Keys (Sama dengan atas)
+        Company: parentKeys.Company,
+        Key1: parentKeys.Key1,
+        Key2: parentKeys.Key2,
+        Key3: parentKeys.Key3,
+        Key4: parentKeys.Key4,
+        Key5: parentKeys.Key5,
+
+        // Identifier Tipe Data
+        ChildKey1: log.logNum.toString(),   //  NOMOR LOG
+        ChildKey2: log.lineNum.toString(),  //  LINK KE LINE
+        ChildKey3: "",
+        ChildKey4: "",
+        ChildKey5: "SJPlant#QRCode",    // PENANDA: TIPE SCAN LOG
+
+        // Data Fields
+        Character01: log.qrCode,        // Raw Scan String
+        Character02: log.partDesc,      // Part Desc
+        Character03: log.guid,          // GUID Unik
+
+        ShortChar01: log.partNum,       // Part Num
+        ShortChar02: log.lotNum,        // Lot Num
+        ShortChar03: log.timestamp,     // Timestamp Scan
+
+        Number01: validQty,             // Qty per scan (pecahan)
+
         RowMod: "A", // Add Baru
       });
     });

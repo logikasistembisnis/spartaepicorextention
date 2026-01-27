@@ -35,8 +35,8 @@ export async function updateHeaderToUD100(
       ...rawData, // Spread data lama
 
       // Override field yang diedit
-      ShortChar01: headerData.shipFrom,
-      ShortChar02: headerData.shipTo,
+      ShortChar02: headerData.shipFrom,
+      ShortChar01: headerData.shipTo,
       Character01: headerData.comment,
       CheckBox05: headerData.isTgp,
       CheckBox01: headerData.isShipped,

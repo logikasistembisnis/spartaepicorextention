@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import HeaderSection from '@/components/sjantarplant/HeaderSection'
 import LinesSection from '@/components/sjantarplant/LinesSection'
-import { SjPlantHeader, SjPlantLine, UD100RawData } from '@/types/sjPlant'
+import { SjPlantHeader, SjPlantLine, UD100RawData, SjScanLog } from '@/types/sjPlant'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { getPlantsList, ApiShip } from '@/api/sjplant/ship'
@@ -22,6 +22,7 @@ function EntryContent() {
     const [isLoadingData, setIsLoadingData] = useState(false);
     const [plantList, setPlantList] = useState<ApiShip[]>([]);
     const [lines, setLines] = useState<SjPlantLine[]>([]);
+    const [logs, setLogs] = useState<SjScanLog[]>([]);
 
     // State Header
     const [headerData, setHeaderData] = useState<SjPlantHeader>({
@@ -65,6 +66,9 @@ function EntryContent() {
                     }
                     if (result.lines) {
                         setLines(result.lines);
+                    }
+                    if (result.logs) {
+                        setLogs(result.logs);
                     }
                 } else {
                     alert(result.message || "Gagal mengambil data header.");
@@ -159,7 +163,11 @@ function EntryContent() {
 
                 // 2. Add New Lines (Batch)
                 if (newLines.length > 0) {
-                    const resAddLines = await addLinesToUD100(currentParentKeys, newLines);
+                    const relevantLogs = logs.filter(
+                        log => log.isNew && newLines.some(nl => nl.lineNum === log.lineNum)
+                    );
+
+                    const resAddLines = await addLinesToUD100(currentParentKeys, newLines, relevantLogs);
                     if (!resAddLines.success) {
                         errorMessages.push(`Gagal tambah barang baru: ${resAddLines.message}`);
                     }
@@ -168,9 +176,15 @@ function EntryContent() {
                 // 3. Update Existing Lines (Looping)
                 if (existingLines.length > 0) {
                     // Gunakan Promise.all agar update berjalan paralel (lebih cepat)
-                    const updatePromises = existingLines.map(line =>
-                        updateLineToUD100A(line, line.rawData!)
-                    );
+                    const updatePromises = existingLines.map(line => {
+                        const newLogsForThisLine = logs.filter(
+                            log => log.lineNum === line.lineNum && log.isNew
+                        );
+                        return updateLineToUD100A(
+                            { ...line, pendingLogs: newLogsForThisLine },
+                            line.rawData!
+                        )
+                    });
 
                     const results = await Promise.all(updatePromises);
 
@@ -185,6 +199,8 @@ function EntryContent() {
                     alert(`Header tersimpan, tapi ada masalah di Lines:\n${errorMessages.join('\n')}`);
                 } else {
                     alert("Simpan Berhasil!");
+                    window.location.reload();
+                    return;
                 }
             } else {
                 // Header sukses, lines kosong
@@ -263,7 +279,9 @@ function EntryContent() {
                     <LinesSection
                         lines={lines}
                         setLines={setLines}
-                        shipFrom={headerData.shipFrom}
+                        scanLogs={logs}
+                        setScanLogs={setLogs}
+                        shipTo={headerData.shipTo}
                     />
                 ) : (
                     <div className="p-8 bg-gray-50 rounded border-2 border-dashed border-gray-300 text-center text-gray-500">
