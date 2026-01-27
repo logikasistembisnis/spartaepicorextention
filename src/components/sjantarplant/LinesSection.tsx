@@ -23,10 +23,10 @@ interface LinesSectionProps {
   setLines: Dispatch<SetStateAction<SjPlantLine[]>>
   scanLogs: SjScanLog[];
   setScanLogs: React.Dispatch<React.SetStateAction<SjScanLog[]>>;
-  shipTo: string
+  shipFrom: string
 }
 
-export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, shipTo }: LinesSectionProps) {
+export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, shipFrom }: LinesSectionProps) {
   const getNextLogNum = (lineNum: number) => {
     const logsForLine = scanLogs.filter(l => l.lineNum === lineNum)
     return logsForLine.length > 0
@@ -58,8 +58,8 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, s
     let whOptions: { code: string; name: string }[] = []
     let defaultWh = ''
 
-    if (shipTo) {
-      const resWh = await getPartWarehouseList(partNum, shipTo)
+    if (shipFrom) {
+      const resWh = await getPartWarehouseList(partNum, shipFrom)
       if (resWh.success && resWh.data) {
         whOptions = resWh.data.map(w => ({
           code: w.PartWhse_WarehouseCode,

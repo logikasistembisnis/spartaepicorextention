@@ -302,7 +302,7 @@ function EntryContent() {
                         setLines={setLines}
                         scanLogs={logs}
                         setScanLogs={setLogs}
-                        shipTo={headerData.shipTo}
+                        shipFrom={headerData.shipFrom}
                     />
                 ) : (
                     <div className="p-8 bg-gray-50 rounded border-2 border-dashed border-gray-300 text-center text-gray-500">

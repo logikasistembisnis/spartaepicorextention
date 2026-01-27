@@ -26,7 +26,7 @@ type ApiResponse = {
 // Fungsi menerima parameter PartNum & ShipFrom untuk filtering
 export async function getPartWarehouseList(
   partNum: string,
-  shipTo: string,
+  shipFrom: string,
 ): Promise<ApiResponse> {
   const cookieStore = await cookies();
   const authHeader = cookieStore.get("session_auth")?.value;
@@ -38,7 +38,7 @@ export async function getPartWarehouseList(
   try {
     // Encode parameter agar aman (menangani spasi atau karakter khusus)
     const encodedPart = encodeURIComponent(partNum);
-    const encodedShipFrom = encodeURIComponent(shipTo);
+    const encodedShipFrom = encodeURIComponent(shipFrom);
 
     // Buat Query OData:
     // Filter dimana PartWhse_PartNum == inputPart DAN Warehse_Address3 == inputShipFrom

@@ -89,7 +89,9 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
 
     // 3. PISAHKAN BERDASARKAN CHILDKEY5
     const lineRecords = ud100aList.filter((r) => r.ChildKey5 === "SJPlant");
-    const logRecords = ud100aList.filter((r) => r.ChildKey5 === "SJPlant#QRCode");
+    const logRecords = ud100aList.filter(
+      (r) => r.ChildKey5 === "SJPlant#QRCode",
+    );
 
     const scanLogs: SjScanLog[] = logRecords.map((log) => ({
       guid: log.Character03 || "",
@@ -104,7 +106,6 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
       status: "UNSHIP",
       isNew: false,
     }));
-
 
     const initialLines: SjPlantLine[] = lineRecords.map((line) => {
       return {
@@ -130,10 +131,10 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
         let binOptions: BinOption[] = [];
 
         // A. FETCH WAREHOUSE LIST
-        if (line.partNum && headerData.shipTo) {
+        if (line.partNum && headerData.shipFrom) {
           const whRes = await getPartWarehouseList(
             line.partNum,
-            headerData.shipTo,
+            headerData.shipFrom,
           );
 
           if (whRes.success && whRes.data) {
