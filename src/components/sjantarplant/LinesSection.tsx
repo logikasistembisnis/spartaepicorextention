@@ -1,6 +1,6 @@
 'use client'
 
-import { Dispatch, SetStateAction, useState } from 'react'
+import { Dispatch, SetStateAction } from 'react'
 import { SjPlantLine, SjScanLog } from '@/types/sjPlant'
 import ScanInput from './ScanInput'
 import ScanResultTable from './ScanResultTable'

@@ -182,21 +182,21 @@ export default function QrGeneration() {
                     // Update Time Print
                     const timestamp = generateTimestamp();
 
-                    const updatePayload: UpdateUD14Item[] = selectedItems.map(item => ({
+                    updatePayload.push({
                         Company: item.company,
                         Key1: item.id,
                         Key2: item.partNumber,
                         Key5: item.key5,
                         SysRowID: item.sysRowId,
                         SysRevID: item.sysRevId,
-                        ShortChar01: item.timePrint ? item.timePrint : timestamp,
+                        ShortChar01: timestamp,
                         ShortChar02: item.lotNumber,
                         Character01: item.description,
                         Number01: item.qtyBox,
                         Number02: item.qtyCetak,
                         ShortChar20: item.entryPerson,
                         Date01: item.entryDate
-                    }));
+                    });
 
                     const generatedBatch = await Promise.all(
                         Array.from({ length: printCount }).map(async (_, index) => {
