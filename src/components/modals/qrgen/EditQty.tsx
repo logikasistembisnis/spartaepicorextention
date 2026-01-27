@@ -5,26 +5,26 @@ import { XMarkIcon } from '@heroicons/react/24/outline'
 
 type EditQtyProps = {
     isOpen: boolean
-    onClose: () => void
-    onSave: () => void
+    onCloseAction: () => void
+    onSaveAction: () => void
     partNumber: string
     currentQty: number
-    setNewQty: (val: number) => void
+    setNewQtyAction: (val: number) => void
     currentQtyCetak: number
-    setNewQtyCetak: (val: number) => void
+    setNewQtyCetakAction: (val: number) => void
     isSaving: boolean
     isPrinted: boolean
 }
 
 export default function EditQty({
     isOpen,
-    onClose,
-    onSave,
+    onCloseAction,
+    onSaveAction,
     partNumber,
     currentQty,
-    setNewQty,
+    setNewQtyAction,
     currentQtyCetak,
-    setNewQtyCetak,
+    setNewQtyCetakAction,
     isSaving,
     isPrinted
 }: EditQtyProps) {
@@ -41,7 +41,7 @@ export default function EditQty({
                         Edit Quantity
                     </h3>
                     <button
-                        onClick={onClose}
+                        onClick={onCloseAction}
                         className="text-gray-400 hover:text-gray-500 transition-colors"
                         disabled={isSaving}
                     >
@@ -72,7 +72,7 @@ export default function EditQty({
                                 type="number"
                                 min="1"
                                 value={currentQty}
-                                onChange={(e) => setNewQty(Number(e.target.value))}
+                                onChange={(e) => setNewQtyAction(Number(e.target.value))}
                                 className={`w-full px-4 py-2 rounded-lg border shadow-sm text-sm md:text-base 
                                     ${isPrinted 
                                         ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' 
@@ -92,7 +92,7 @@ export default function EditQty({
                             type="number"
                             min="1"
                             value={currentQtyCetak}
-                            onChange={(e) => setNewQtyCetak(Number(e.target.value))}
+                            onChange={(e) => setNewQtyCetakAction(Number(e.target.value))}
                             className="w-full px-4 py-2 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm md:text-base text-gray-900"
                             disabled={isSaving}
                             autoFocus={isPrinted}
@@ -103,14 +103,14 @@ export default function EditQty({
                 {/* Footer */}
                 <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
                     <button
-                        onClick={onClose}
+                        onClick={onCloseAction}
                         disabled={isSaving}
                         className="px-3 md:px-4 py-2 text-xs md:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 disabled:opacity-50"
                     >
                         Batal
                     </button>
                     <button
-                        onClick={onSave}
+                        onClick={onSaveAction}
                         disabled={isSaving || currentQty <= 0}
                         className="px-3 md:px-4 py-2 text-xs md:text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 flex items-center gap-2"
                     >

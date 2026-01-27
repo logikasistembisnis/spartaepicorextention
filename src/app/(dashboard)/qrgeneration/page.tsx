@@ -479,16 +479,16 @@ export default function QrGeneration() {
 
             <EditQty
                 isOpen={isEditModalOpen}
-                onClose={() => {
+                onCloseAction={() => {
                     setIsEditModalOpen(false)
                     setEditingItem(null)
                 }}
-                onSave={handleSaveEdit}
+                onSaveAction={handleSaveEdit}
                 partNumber={editingItem?.partNumber || ''}
                 currentQty={newQty}
-                setNewQty={setNewQty}
+                setNewQtyAction={setNewQty}
                 currentQtyCetak={newQtyCetak}
-                setNewQtyCetak={setNewQtyCetak}
+                setNewQtyCetakAction={setNewQtyCetak}
                 isSaving={isSavingEdit}
                 isPrinted={!!editingItem?.timePrint}
             />
