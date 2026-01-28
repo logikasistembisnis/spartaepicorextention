@@ -8,10 +8,9 @@ interface HeaderSectionProps {
     data: SjPlantHeader;
     plantList: ApiShip[];
     onChange: (field: keyof SjPlantHeader, value: string | boolean | number) => void;
-    isReadOnly?: boolean;
 }
 
-export default function HeaderSection({ data, plantList, onChange, isReadOnly = false }: HeaderSectionProps) {
+export default function HeaderSection({ data, plantList, onChange }: HeaderSectionProps) {
 
     // Helper untuk handle change input standar
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -45,7 +44,7 @@ export default function HeaderSection({ data, plantList, onChange, isReadOnly = 
                                 name="packNum"
                                 value={data.packNum}
                                 onChange={handleChange}
-                                disabled={isReadOnly}
+                                readOnly
                                 className={`${inputClass} pr-10`}
                                 placeholder="Pack Num"
                             />
@@ -60,7 +59,6 @@ export default function HeaderSection({ data, plantList, onChange, isReadOnly = 
                                 name="shipFrom"
                                 value={data.shipFrom}
                                 onChange={handleChange}
-                                disabled={isReadOnly}
                                 className={`${inputClass} appearance-none pr-10 cursor-pointer`}
                             >
                                 <option value=""></option>
@@ -84,7 +82,6 @@ export default function HeaderSection({ data, plantList, onChange, isReadOnly = 
                                 name="shipTo"
                                 value={data.shipTo}
                                 onChange={handleChange}
-                                disabled={isReadOnly}
                                 className={`${inputClass} appearance-none pr-10 cursor-pointer`}
                             >
                                 <option value=""></option>

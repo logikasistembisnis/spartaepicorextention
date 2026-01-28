@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import HeaderSection from '@/components/sjantarplant/HeaderSection'
 import LinesSection from '@/components/sjantarplant/LinesSection'
 import { SjPlantHeader, SjPlantLine, UD100RawData, SjScanLog } from '@/types/sjPlant'
-import { ArrowLeftIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { getPlantsList, ApiShip } from '@/api/sjplant/ship'
 import { saveHeaderToUD100 } from '@/api/sjplant/addheader'
@@ -15,18 +15,21 @@ import { addLinesToUD100, ParentKeys } from '@/api/sjplant/addlines';
 import { updateLineToUD100A } from '@/api/sjplant/updateline';
 import { checkGuidExists } from "@/api/sjplant/checkguid";
 import { InvShip } from "@/api/sjplant/invship";
+import { RetInvShip } from '@/api/sjplant/retinvship'
 
 function EntryContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const packNumParam = searchParams.get('id')
-    const [isSaving, setIsSaving] = useState(false);
-    const [isLoadingData, setIsLoadingData] = useState(false);
+    const [isSaving, setIsSaving] = useState(false)
+    const [isLoadingData, setIsLoadingData] = useState(false)
     const [isPostingShipped, setIsPostingShipped] = useState(false)
     const [hasPostedShipped, setHasPostedShipped] = useState(false)
-    const [plantList, setPlantList] = useState<ApiShip[]>([]);
-    const [lines, setLines] = useState<SjPlantLine[]>([]);
-    const [logs, setLogs] = useState<SjScanLog[]>([]);
+    const [shipTriggeredByUser, setShipTriggeredByUser] = useState(false)
+    const [returnTriggeredByUser, setReturnTriggeredByUser] = useState(false)
+    const [plantList, setPlantList] = useState<ApiShip[]>([])
+    const [lines, setLines] = useState<SjPlantLine[]>([])
+    const [logs, setLogs] = useState<SjScanLog[]>([])
 
     // State Header
     const [headerData, setHeaderData] = useState<SjPlantHeader>({
@@ -55,47 +58,68 @@ function EntryContent() {
         fetchPlants();
     }, []);
 
-    useEffect(() => {
-        const fetchHeaderData = async () => {
-            if (!packNumParam) return; // Jika Add New, skip
+    const fetchHeaderData = async () => {
+        if (!packNumParam) return; // Jika Add New, skip
 
-            setIsLoadingData(true);
-            try {
-                const result = await getHeaderById(packNumParam);
+        setIsLoadingData(true);
+        try {
+            const result = await getHeaderById(packNumParam);
 
-                if (result.success && result.data) {
-                    setHeaderData(result.data);
-                    if (result.rawData) {
-                        setRawData(result.rawData);
-                    }
-                    if (result.lines) {
-                        setLines(result.lines);
-                    }
-                    if (result.logs) {
-                        setLogs(result.logs);
-                    }
-                } else {
-                    alert(result.message || "Gagal mengambil data header.");
-                    router.push('/sjantarplant'); // Redirect balik jika error
+            if (result.success && result.data) {
+                setHeaderData(result.data);
+                if (result.rawData) {
+                    setRawData(result.rawData);
                 }
-            } catch (error) {
-                console.error(error);
-                alert("Terjadi kesalahan saat memuat data.");
-            } finally {
-                setIsLoadingData(false);
+                if (result.lines) {
+                    setLines(result.lines);
+                }
+                if (result.logs) {
+                    setLogs(result.logs);
+                }
+            } else {
+                alert(result.message || "Gagal mengambil data header.");
+                router.push('/sjantarplant'); // Redirect balik jika error
             }
+        } catch (error) {
+            console.error(error);
+            alert("Terjadi kesalahan saat memuat data.");
+        } finally {
+            setIsLoadingData(false);
         }
+    };
 
+    useEffect(() => {
         fetchHeaderData();
     }, [packNumParam, router]);
 
-    const handleHeaderChange = (field: keyof SjPlantHeader, value: string | boolean | number) => {
+    const handleHeaderChange = (
+        field: keyof SjPlantHeader,
+        value: string | boolean | number
+    ) => {
+        // DETEKSI perubahan checkbox shipped oleh USER
+        if (
+            field === 'isShipped' &&
+            headerData.isShipped === false &&
+            value === true
+        ) {
+            setShipTriggeredByUser(true);
+        }
+
+        // USER UNCHECK SHIP (RETURN)
+        if (
+            field === 'isShipped' &&
+            headerData.isShipped === true &&
+            value === false
+        ) {
+            setReturnTriggeredByUser(true);
+        }
+
         setHeaderData(prev => ({ ...prev, [field]: value }))
     }
 
     useEffect(() => {
         if (
-            !headerData.isShipped ||
+            !shipTriggeredByUser ||
             hasPostedShipped ||
             isPostingShipped ||
             !headerData.packNum
@@ -104,6 +128,7 @@ function EntryContent() {
         if (!headerData.shipFrom || !headerData.shipTo) {
             alert("Ship From dan Ship To wajib diisi");
             setHeaderData(prev => ({ ...prev, isShipped: false }));
+            setShipTriggeredByUser(false);
             return;
         }
 
@@ -119,6 +144,7 @@ function EntryContent() {
 
                 alert(result.output || "Inventory Transfer Success");
                 setHasPostedShipped(true);
+                setShipTriggeredByUser(false);
 
                 if (rawData) {
                     await updateHeaderToUD100(
@@ -127,9 +153,12 @@ function EntryContent() {
                     );
                 }
 
+                await fetchHeaderData();
+
             } catch (e) {
                 alert(e instanceof Error ? e.message : "Gagal");
                 setHeaderData(prev => ({ ...prev, isShipped: false }));
+                setShipTriggeredByUser(false);
             } finally {
                 setIsPostingShipped(false);
             }
@@ -137,7 +166,57 @@ function EntryContent() {
 
         handleShip();
 
-    }, [headerData.isShipped]);
+    }, [shipTriggeredByUser]);
+
+    useEffect(() => {
+        if (
+            !returnTriggeredByUser ||
+            isPostingShipped ||
+            !headerData.packNum
+        ) return;
+
+        if (!headerData.shipFrom || !headerData.shipTo) {
+            alert("Ship From dan Ship To wajib diisi");
+            setHeaderData(prev => ({ ...prev, isShipped: true }));
+            setReturnTriggeredByUser(false);
+            return;
+        }
+
+        const handleReturnShip = async () => {
+            setIsPostingShipped(true);
+            try {
+                const result = await RetInvShip({
+                    SJPlant: headerData.packNum,
+                    ShipFrom: headerData.shipFrom,
+                    ShipTo: headerData.shipTo,
+                    Date: `${headerData.shipDate}T00:00:00`,
+                });
+
+                alert(result.output || "Return Inventory Transfer Success");
+                setReturnTriggeredByUser(false);
+                setHasPostedShipped(false);
+
+                if (rawData) {
+                    await updateHeaderToUD100(
+                        { ...headerData, status: "OPEN", isShipped: false },
+                        rawData
+                    );
+                }
+
+                await fetchHeaderData();
+
+            } catch (e) {
+                alert(e instanceof Error ? e.message : "Gagal return inventory");
+                // rollback UI
+                setHeaderData(prev => ({ ...prev, isShipped: true }));
+                setReturnTriggeredByUser(false);
+            } finally {
+                setIsPostingShipped(false);
+            }
+        };
+
+        handleReturnShip();
+    }, [returnTriggeredByUser]);
 
     // --- LOGIC TOMBOL SIMPAN YANG DIPERBAIKI ---
     const handleSave = async () => {
@@ -233,6 +312,7 @@ function EntryContent() {
 
                         if (check.exists) {
                             alert(`QR Code dengan GUID ${guid} sudah pernah discan!`);
+                            await fetchHeaderData();
                             return; // STOP TOTAL
                         }
                     }
@@ -307,7 +387,16 @@ function EntryContent() {
     const isLinesActive = isEditMode || !!headerData.packNum;
 
     return (
-        <div className="mx-auto pb-20">
+        <div className="relative mx-auto pb-20">
+            {isLoadingData && (
+                <div className="absolute inset-0 z-40 bg-gray-50 bg-opacity-70">
+                    <div className="sticky top-1/2 -translate-y-1/2 flex flex-col items-center gap-2">
+                        <ArrowPathIcon className="h-8 w-8 text-orange-600 animate-spin" />
+                        <span className="text-sm text-gray-500">Memuat data...</span>
+                    </div>
+                </div>
+            )}
+
             {/* Navigasi */}
             <div className="sticky top-0 z-50 backdrop-blur-xl flex justify-between items-center mb-2 py-3">
                 <div className="flex items-center gap-2">
