@@ -77,7 +77,7 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
       comment: raw.Character01 || "",
       isShipped: raw.CheckBox01 || false,
       shipDate: raw.Date02 ? raw.Date02.split("T")[0] : "",
-      status: raw.ShortChar06 || "OPEN",
+      status: raw.ShortChar06 || "-",
       company: raw.Company,
       sysRowID: raw.SysRowID,
       sysRevID: raw.SysRevID,
@@ -103,7 +103,7 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
       qty: Number(log.Number01) || 0,
       qrCode: log.Character01 || "",
       timestamp: log.ShortChar03 || "",
-      status: "UNSHIP",
+      status: log.ShortChar07 ||"UNSHIP",
       isNew: false,
     }));
 
@@ -118,7 +118,7 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
         binNum: line.ShortChar05 || "",
         qty: Number(line.Number01) || 0,
         comment: line.ShortChar06 || "",
-        status: "UNSHIP",
+        status: line.ShortChar07 ||"UNSHIP",
         availableWarehouses: [],
         availableBins: [],
         rawData: line,

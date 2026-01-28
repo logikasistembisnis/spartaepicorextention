@@ -37,6 +37,7 @@ export async function updateHeaderToUD100(
       // Override field yang diedit
       ShortChar02: headerData.shipFrom,
       ShortChar01: headerData.shipTo,
+      ShortChar06: headerData.status,
       Character01: headerData.comment,
       CheckBox05: headerData.isTgp,
       CheckBox01: headerData.isShipped,

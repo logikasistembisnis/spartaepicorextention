@@ -14,6 +14,7 @@ import { updateHeaderToUD100 } from '@/api/sjplant/updateheader'
 import { addLinesToUD100, ParentKeys } from '@/api/sjplant/addlines';
 import { updateLineToUD100A } from '@/api/sjplant/updateline';
 import { checkGuidExists } from "@/api/sjplant/checkguid";
+import { InvShip } from "@/api/sjplant/invship";
 
 function EntryContent() {
     const router = useRouter()
@@ -21,6 +22,8 @@ function EntryContent() {
     const packNumParam = searchParams.get('id')
     const [isSaving, setIsSaving] = useState(false);
     const [isLoadingData, setIsLoadingData] = useState(false);
+    const [isPostingShipped, setIsPostingShipped] = useState(false)
+    const [hasPostedShipped, setHasPostedShipped] = useState(false)
     const [plantList, setPlantList] = useState<ApiShip[]>([]);
     const [lines, setLines] = useState<SjPlantLine[]>([]);
     const [logs, setLogs] = useState<SjScanLog[]>([]);
@@ -35,7 +38,7 @@ function EntryContent() {
         isTgp: false,
         isShipped: false,
         comment: '',
-        status: 'OPEN',
+        status: '',
         company: '166075',
     })
 
@@ -89,6 +92,52 @@ function EntryContent() {
     const handleHeaderChange = (field: keyof SjPlantHeader, value: string | boolean | number) => {
         setHeaderData(prev => ({ ...prev, [field]: value }))
     }
+
+    useEffect(() => {
+        if (
+            !headerData.isShipped ||
+            hasPostedShipped ||
+            isPostingShipped ||
+            !headerData.packNum
+        ) return;
+
+        if (!headerData.shipFrom || !headerData.shipTo) {
+            alert("Ship From dan Ship To wajib diisi");
+            setHeaderData(prev => ({ ...prev, isShipped: false }));
+            return;
+        }
+
+        const handleShip = async () => {
+            setIsPostingShipped(true);
+            try {
+                const result = await InvShip({
+                    SJPlant: headerData.packNum,
+                    ShipFrom: headerData.shipFrom,
+                    ShipTo: headerData.shipTo,
+                    Date: `${headerData.shipDate}T00:00:00`,
+                });
+
+                alert(result.output || "Inventory Transfer Success");
+                setHasPostedShipped(true);
+
+                if (rawData) {
+                    await updateHeaderToUD100(
+                        { ...headerData, status: "SHIPPED", isShipped: true },
+                        rawData
+                    );
+                }
+
+            } catch (e) {
+                alert(e instanceof Error ? e.message : "Gagal");
+                setHeaderData(prev => ({ ...prev, isShipped: false }));
+            } finally {
+                setIsPostingShipped(false);
+            }
+        };
+
+        handleShip();
+
+    }, [headerData.isShipped]);
 
     // --- LOGIC TOMBOL SIMPAN YANG DIPERBAIKI ---
     const handleSave = async () => {

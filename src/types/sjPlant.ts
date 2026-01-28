@@ -107,6 +107,7 @@ export interface UD100ARawData {
   ShortChar04?: string;
   ShortChar05?: string;
   ShortChar06?: string;
+  ShortChar07?: string;
   ShortChar09?: string;
   ShortChar10?: string;
   CheckBox20?: boolean;

@@ -161,7 +161,7 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, s
       availableWarehouses: whOptions,
       availableBins: binOptions,
       comment: '',
-      status: 'UNSHIP',
+      status: '',
       pendingLogs: [scanLog],
     }
 

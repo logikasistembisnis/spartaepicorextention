@@ -72,7 +72,7 @@ export async function getSJList(): Promise<ActionResponse> {
         packNumber: item.UD100_Key1,
         actualShipDate: formattedDate,
         shipTo: item.UD100_ShortChar01 || "-",
-        status: item.UD100_ShortChar06 || "OPEN",
+        status: item.UD100_ShortChar06 || "-",
       };
     });
 
