@@ -16,6 +16,9 @@ import { updateLineToUD100A } from '@/api/sjplant/updateline';
 import { checkGuidExists } from "@/api/sjplant/checkguid";
 import { InvShip } from "@/api/sjplant/invship";
 import { RetInvShip } from '@/api/sjplant/retinvship'
+import { pdf } from "@react-pdf/renderer";
+import SuratJalanPDF from "@/components/pdf/SJAntarPlant";
+import { getShipToAddress } from "@/constants/sjAddress";
 
 function EntryContent() {
     const router = useRouter()
@@ -381,6 +384,37 @@ function EntryContent() {
         }
     }
 
+    const handlePrintSuratJalan = async () => {
+        if (!headerData.packNum) {
+            alert("Simpan data dulu sebelum cetak Surat Jalan");
+            return;
+        }
+
+        if (lines.length === 0) {
+            alert("Tidak ada barang untuk dicetak");
+            return;
+        }
+
+        try {
+            const address = getShipToAddress(headerData.shipTo);
+
+            const blob = await pdf(
+                <SuratJalanPDF
+                    header={headerData}
+                    lines={lines}
+                    address={address}
+                />
+            ).toBlob();
+
+            const url = URL.createObjectURL(blob);
+            window.open(url, "_blank");
+
+        } catch (error) {
+            console.error("Print Surat Jalan Error:", error);
+            alert("Gagal membuat PDF Surat Jalan");
+        }
+    }
+
     // Logic untuk menentukan apakah mode Edit atau Add
     const isEditMode = !!packNumParam;
     // Logic: Lines section aktif jika sudah tersimpan (Edit Mode) atau Header punya PackNum
@@ -419,6 +453,13 @@ function EntryContent() {
                         className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-orange-600 border border-orange-600 rounded-lg hover:bg-orange-700 disabled:opacity-50"
                     >
                         {isSaving ? 'Saving...' : 'Simpan'}
+                    </button>
+                    <button
+                        onClick={handlePrintSuratJalan}
+                        disabled={!headerData.packNum}
+                        className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg disabled:opacity-50"
+                    >
+                        Surat Jalan
                     </button>
                 </div>
             </div>
