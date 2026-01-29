@@ -171,27 +171,44 @@ export default function SJLineTable({ lines, setLines }: SJLineTableProps) {
 
                                     {/* 7. Bin From (Dropdown - Editable) */}
                                     <td className="px-2 py-2">
-                                        <select
-                                            value={line.binNum}
-                                            onChange={(e) => updateLineState(line.lineNum, 'binNum', e.target.value)}
-                                            className={selectClass}
-                                            // Disable jika belum pilih gudang atau bins kosong
-                                            disabled={!line.warehouseCode || !line.availableBins?.length}
-                                            title={line.binNum}
-                                        >
-                                            <option value="">Pilih Bin</option>
-                                            {line.availableBins?.map((bin) => (
-                                                <option key={bin.code} value={bin.code}>
-                                                    {bin.code}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        {/* Info helper jika kosong */}
-                                        {line.warehouseCode && (!line.availableBins || line.availableBins.length === 0) && (
-                                            <div className="text-[9px] text-red-400 mt-1 italic">
-                                                No Bin Found
-                                            </div>
-                                        )}
+                                        <div className="relative w-full">
+                                            <input
+                                                type="text"
+                                                value={line.binNum}
+                                                onChange={(e) => updateLineState(line.lineNum, 'binNum', e.target.value.toUpperCase())}
+                                                className={`${inputClass} pr-6 uppercase`}
+                                                placeholder={line.warehouseCode ? "Ketik/Pilih" : "-"}
+                                                disabled={!line.warehouseCode}
+                                            />
+
+                                            {/* SELECT TRIGGER: Hanya muncul jika ada opsi Bin */}
+                                            {line.availableBins && line.availableBins.length > 0 && (
+                                                <>
+                                                    {/* Visual Icon Panah (Pojok Kanan) */}
+                                                    <div className="absolute right-1 top-0 bottom-0 flex items-center px-1 pointer-events-none text-gray-500">
+                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                                    </div>
+
+                                                    <select
+                                                        className="absolute inset-y-0 right-0 w-8 opacity-0 cursor-pointer text-xs"
+                                                        value=""
+                                                        onChange={(e) => {
+                                                            if (e.target.value) {
+                                                                updateLineState(line.lineNum, 'binNum', e.target.value);
+                                                            }
+                                                        }}
+                                                        disabled={!line.warehouseCode}
+                                                    >
+                                                        <option value="" disabled>Pilih Bin</option>
+                                                        {line.availableBins.map((bin) => (
+                                                            <option key={bin.code} value={bin.code}>
+                                                                {bin.code}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </>
+                                            )}
+                                        </div>
                                     </td>
 
                                     {/* 8. Qty Ship (Editable Number, default dari scan) */}
