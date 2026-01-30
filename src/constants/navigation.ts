@@ -1,4 +1,4 @@
-import { HomeIcon, QrCodeIcon, TruckIcon } from "@heroicons/react/24/outline";
+import { HomeIcon, QrCodeIcon, TruckIcon, ClipboardDocumentCheckIcon } from "@heroicons/react/24/outline";
 
 export type MenuItem = {
   name: string;
@@ -24,6 +24,12 @@ export const MENU_ITEMS: MenuItem[] = [
     href: "/sjantarplant",
     icon: TruckIcon,
     match: (path) => path.startsWith("/sjantarplant"),
+  },
+  {
+    name: "Receipt Antar Plant",
+    href: "/receiptplant",
+    icon: ClipboardDocumentCheckIcon,
+    match: (path) => path.startsWith("/receiptplant"),
   },
 ];
 
