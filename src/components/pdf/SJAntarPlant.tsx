@@ -17,7 +17,7 @@ export default function SuratJalanPDF({ header, lines, address }: Props) {
             <Page size="LETTER" style={styles.page}>
                 <View style={styles.contentWrapper}>
                     <PdfHeader header={header} address={address} />
-                    <PdfTable lines={lines} note={header.comment} />
+                    <PdfTable lines={lines} note={header.comment} header={header} />
                     <View style={{ flex: 1 }} />
                     <PdfSign header={header} />
                 </View>

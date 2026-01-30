@@ -1,13 +1,25 @@
-import { View, Text, StyleSheet } from "@react-pdf/renderer";
-import { SjPlantLine } from "@/types/sjPlant";
+import { View, Text, StyleSheet, Image } from "@react-pdf/renderer";
+import QRCode from "qrcode";
+import { SjPlantLine, SjPlantHeader } from "@/types/sjPlant";
+import React from "react";
 
 export default function PdfTable({
     lines,
     note,
+    header,
 }: {
     lines: SjPlantLine[];
     note?: string;
+    header: SjPlantHeader;
 }) {
+    const formatYYMMDD = (dateStr?: string) => {
+        if (!dateStr) return "";
+        const d = new Date(dateStr);
+        const yy = d.getFullYear().toString().slice(-2);
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        return `${yy}${mm}${dd}`;
+    };
 
     const formatQty = (value: number | string) => {
         const num = Number(value || 0);
@@ -32,6 +44,17 @@ export default function PdfTable({
         (sum, l) => sum + Number(l.qty || 0),
         0
     );
+
+    const qrValue = `${header.packNum}#${formatYYMMDD(header.shipDate)}`;
+
+    const [qrBase64, setQrBase64] = React.useState<string>("");
+
+    React.useEffect(() => {
+        QRCode.toDataURL(qrValue, {
+            width: 120,
+            margin: 1,
+        }).then(setQrBase64);
+    }, [qrValue]);
 
     return (
         <View style={styles.table} wrap>
@@ -74,12 +97,23 @@ export default function PdfTable({
                 <Text style={styles.colRemark}></Text>
             </View>
 
-            {/* ===== NOTE ===== */}
-            <View style={styles.note} wrap>
-                <Text style={styles.noteLabel}>Note:</Text>
-                <Text style={styles.noteText}>
-                    {note && note.trim() !== "" ? note : " "}
-                </Text>
+            {/* ===== NOTE + QR ===== */}
+            <View style={styles.noteWrapper} wrap>
+                {/* NOTE */}
+                <View style={styles.noteLeft}>
+                    <Text style={styles.noteLabel}>Note:</Text>
+                    <Text style={styles.noteText}>
+                        {note && note.trim() !== "" ? note : " "}
+                    </Text>
+                </View>
+
+                {/* QR */}
+                <View style={styles.noteRight}>
+                    <Text style={styles.qrLabel}>QR SJ Antar Plant</Text>
+                    {qrBase64 && (
+                        <Image src={qrBase64} style={styles.qrImage} />
+                    )}
+                </View>
             </View>
         </View>
     );
@@ -162,5 +196,36 @@ const styles = StyleSheet.create({
     },
     noteText: {
         fontSize: 9,
+    },
+    noteWrapper: {
+        marginTop: 10,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        paddingTop: 6,
+    },
+
+    noteLeft: {
+        width: "65%",
+    },
+
+    noteRight: {
+        width: "20%",
+        alignItems: "center",
+    },
+
+    qrLabel: {
+        fontSize: 8,
+        marginBottom: 4,
+    },
+
+    qrImage: {
+        width: 80,
+        height: 80,
+    },
+
+    qrText: {
+        fontSize: 7,
+        marginTop: 4,
+        textAlign: "center",
     },
 });
