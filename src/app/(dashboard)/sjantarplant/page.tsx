@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { PlusIcon, TruckIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, TruckIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
 import { getSJList, SJItem } from '@/api/sjplant/sjplantlist'
 
@@ -10,6 +10,7 @@ export default function SJAntarPlant() {
 
     // --- STATE MANAGEMENT ---
     const [data, setData] = useState<SJItem[]>([])
+    const [searchTerm, setSearchTerm] = useState("")
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState("")
 
@@ -41,6 +42,10 @@ export default function SJAntarPlant() {
         return 'bg-yellow-100 text-yellow-700 border-yellow-200'
     }
 
+    const filteredData = data.filter(item =>
+        item.packNumber.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+
     return (
         <div className="space-y-6">
             {/* --- HEADER SECTION --- */}
@@ -55,6 +60,20 @@ export default function SJAntarPlant() {
                         <span>Add New</span>
                     </button>
                 </div>
+            </div>
+
+            {/* --- SEARCH FILTER --- */}
+            <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <MagnifyingGlassIcon className="h-4 w-4 text-gray-400" />
+                </div>
+                <input
+                    type="text"
+                    placeholder="Search by Pack Number Plant..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="block w-full rounded-md border-0 py-2 pl-9 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset text-sm"
+                />
             </div>
 
             {/* --- TABLE SECTION --- */}
@@ -84,8 +103,8 @@ export default function SJAntarPlant() {
                                         {error}
                                     </td>
                                 </tr>
-                            ) : data.length > 0 ? (
-                                data.map((item, index) => (
+                            ) : filteredData.length > 0 ? (
+                                filteredData.map((item, index) => (
                                     <tr
                                         key={item.id}
                                         className="hover:bg-gray-50 transition-colors cursor-pointer"
@@ -112,10 +131,9 @@ export default function SJAntarPlant() {
                                 // STATE KOSONG (EMPTY STATE)
                                 <tr>
                                     <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
-                                        <div className="flex flex-col items-center justify-center gap-2">
-                                            <TruckIcon className="h-8 w-8 text-gray-300" />
-                                            <p>Belum ada data SJ Antar Plant.</p>
-                                        </div>
+                                        {searchTerm
+                                            ? "Data tidak ditemukan."
+                                            : "Belum ada data SJ Antar Plant."}
                                     </td>
                                 </tr>
                             )}
