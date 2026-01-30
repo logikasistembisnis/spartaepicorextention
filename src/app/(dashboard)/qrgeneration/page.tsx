@@ -304,6 +304,10 @@ export default function QrGeneration() {
 
     // Handle Delete Baris
     const handleDelete = async (itemToDelete: PartItem) => {
+        if (itemToDelete.timePrint) {
+            alert("Item sudah diprint (QR Code generated). Data tidak bisa dihapus.");
+            return;
+        }
         if (!window.confirm(`Yakin ingin menghapus PartNum ${itemToDelete.partNumber}, Qty Box ${itemToDelete.qtyBox}?`)) return;
 
         const previousItems = [...items];
@@ -453,7 +457,17 @@ export default function QrGeneration() {
                                                     </button>
 
                                                     {/* TOMBOL DELETE */}
-                                                    <button onClick={(e) => { e.stopPropagation(); handleDelete(item); }} className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50">
+                                                    <button onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDelete(item);
+                                                    }}
+                                                        disabled={!!item.timePrint}
+                                                        className={`p-2 rounded-full transition-colors ${!!item.timePrint
+                                                                ? 'text-gray-300 cursor-not-allowed' // Style jika disabled 
+                                                                : 'text-red-500 hover:text-red-700 hover:bg-red-50' // Style jika aktif (merah)
+                                                            }`}
+                                                        title={!!item.timePrint ? "Sudah diprint, tidak bisa dihapus" : "Hapus"}
+                                                    >
                                                         <TrashIcon className="h-5 w-5" />
                                                     </button>
                                                 </div>
