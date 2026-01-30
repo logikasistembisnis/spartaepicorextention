@@ -26,9 +26,10 @@ interface LinesSectionProps {
   setScanLogs: React.Dispatch<React.SetStateAction<SjScanLog[]>>;
   shipFrom: string;
   onRefresh: () => Promise<void>;
+  isLocked: boolean;
 }
 
-export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, shipFrom, onRefresh }: LinesSectionProps) {
+export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, shipFrom, onRefresh, isLocked }: LinesSectionProps) {
   const getNextLogNum = (lineNum: number) => {
     const logsForLine = scanLogs.filter(l => l.lineNum === lineNum)
     return logsForLine.length > 0
@@ -38,6 +39,10 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, s
 
   // MAIN SCAN HANDLER (ADD)
   const handleProcessScan = async (rawValue: string) => {
+    if (isLocked) {
+      alert("Data sudah SHIPPED. Tidak bisa menambah atau mengubah barang.");
+      return;
+    }
 
     // FORMAT: PART#DESC#LOT#QTY#GUID#TIMESTAMP
     const parts = rawValue.split('#')
@@ -177,6 +182,10 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, s
   }
 
   const handleDeleteLine = async (line: SjPlantLine) => {
+    if (isLocked) {
+      alert("Data sudah SHIPPED. Tidak bisa menghapus line.");
+      return;
+    }
     const confirm = window.confirm(
       `Hapus line ${line.partNum} - ${line.lotNum}?`
     )
@@ -214,9 +223,9 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, s
     <div className="bg-white rounded-lg shadow-sm mt-2 p-6 border border-gray-200">
       <h3 className="font-bold text-lg text-gray-700 mb-4">Lines Detail</h3>
 
-      <ScanInput onScan={handleProcessScan} />
+      <ScanInput onScan={handleProcessScan} disabled={isLocked} />
 
-      <SJLineTable lines={lines} setLines={setLines} onDeleteLine={handleDeleteLine} />
+      <SJLineTable lines={lines} setLines={setLines} onDeleteLine={handleDeleteLine} isLocked={isLocked}/>
 
       <ScanResultTable items={scanLogs} />
     </div>

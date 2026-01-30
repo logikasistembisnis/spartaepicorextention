@@ -449,8 +449,9 @@ function EntryContent() {
                     </button>
                     <button
                         onClick={handleSave}
-                        disabled={isSaving}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-orange-600 border border-orange-600 rounded-lg hover:bg-orange-700 disabled:opacity-50"
+                        disabled={isSaving || headerData.isShipped}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-lg
+                        disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isSaving ? 'Saving...' : 'Simpan'}
                     </button>
@@ -470,6 +471,7 @@ function EntryContent() {
                     data={headerData}
                     plantList={plantList}
                     onChange={handleHeaderChange}
+                    isLocked={headerData.isShipped}
                 />
             </div>
 
@@ -483,6 +485,7 @@ function EntryContent() {
                         setScanLogs={setLogs}
                         shipFrom={headerData.shipFrom}
                         onRefresh={fetchHeaderData}
+                        isLocked={headerData.isShipped}
                     />
                 ) : (
                     <div className="p-8 bg-gray-50 rounded border-2 border-dashed border-gray-300 text-center text-gray-500">

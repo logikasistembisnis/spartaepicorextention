@@ -4,9 +4,10 @@ import { PlusIcon } from '@heroicons/react/24/outline'
 
 interface ScanInputProps {
     onScan: (rawValue: string) => void;
+    disabled?: boolean;
 }
 
-export default function ScanInput({ onScan }: ScanInputProps) {
+export default function ScanInput({ onScan, disabled }: ScanInputProps) {
     const [val, setVal] = useState('')
     const inputRef = useRef<HTMLInputElement>(null)
 
@@ -30,6 +31,7 @@ export default function ScanInput({ onScan }: ScanInputProps) {
                     type="text"
                     value={val}
                     onChange={(e) => setVal(e.target.value)}
+                    disabled={disabled}
                     className="flex-1 rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2"
                     placeholder="Input hasil scan barcode di sini..."
                     autoComplete="off"

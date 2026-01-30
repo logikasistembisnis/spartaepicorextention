@@ -8,9 +8,10 @@ interface HeaderSectionProps {
     data: SjPlantHeader;
     plantList: ApiShip[];
     onChange: (field: keyof SjPlantHeader, value: string | boolean | number) => void;
+    isLocked?: boolean;
 }
 
-export default function HeaderSection({ data, plantList, onChange }: HeaderSectionProps) {
+export default function HeaderSection({ data, plantList, onChange, isLocked }: HeaderSectionProps) {
 
     // Helper untuk handle change input standar
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -59,6 +60,7 @@ export default function HeaderSection({ data, plantList, onChange }: HeaderSecti
                                 name="shipFrom"
                                 value={data.shipFrom}
                                 onChange={handleChange}
+                                disabled={isLocked}
                                 className={`${inputClass} appearance-none pr-10 cursor-pointer`}
                             >
                                 <option value=""></option>
@@ -82,6 +84,7 @@ export default function HeaderSection({ data, plantList, onChange }: HeaderSecti
                                 name="shipTo"
                                 value={data.shipTo}
                                 onChange={handleChange}
+                                disabled={isLocked}
                                 className={`${inputClass} appearance-none pr-10 cursor-pointer`}
                             >
                                 <option value=""></option>
@@ -105,6 +108,7 @@ export default function HeaderSection({ data, plantList, onChange }: HeaderSecti
                             name="actualShipDate"
                             value={data.actualShipDate}
                             onChange={handleChange}
+                            disabled={isLocked}
                             className={inputClass}
                         />
                     </div>
@@ -116,6 +120,7 @@ export default function HeaderSection({ data, plantList, onChange }: HeaderSecti
                             name="isTgp"
                             checked={data.isTgp}
                             onChange={handleChange}
+                            disabled={isLocked}
                             id="tgpCheck"
                             className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                         />
@@ -149,6 +154,7 @@ export default function HeaderSection({ data, plantList, onChange }: HeaderSecti
                                 name="shipDate"
                                 value={data.shipDate}
                                 onChange={handleChange}
+                                disabled={isLocked}
                                 className={`${inputClass} bg-white`}
                             />
                         </div>
@@ -169,6 +175,7 @@ export default function HeaderSection({ data, plantList, onChange }: HeaderSecti
                     name="comment"
                     value={data.comment}
                     onChange={handleChange}
+                    disabled={isLocked}
                     rows={3}
                     className={inputClass}
                     placeholder="Type any additional notes here..."

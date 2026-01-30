@@ -9,9 +9,10 @@ interface SJLineTableProps {
     lines: SjPlantLine[];
     setLines: Dispatch<SetStateAction<SjPlantLine[]>>;
     onDeleteLine: (line: SjPlantLine) => void;
+    isLocked: boolean;
 }
 
-export default function SJLineTable({ lines, setLines, onDeleteLine }: SJLineTableProps) {
+export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }: SJLineTableProps) {
 
     // Fungsi update data per baris (misal ganti Warehouse / Qty manual)
     const updateLineState = (id: number, field: keyof SjPlantLine, value: string | number) => {
@@ -145,6 +146,7 @@ export default function SJLineTable({ lines, setLines, onDeleteLine }: SJLineTab
                                             value={line.warehouseCode}
                                             onChange={(e) => handleWarehouseChange(line.lineNum, e.target.value)}
                                             className={selectClass}
+                                            disabled={isLocked}
                                             title={line.warehouseCode}
                                         >
                                             <option value="">Pilih Wh</option>
@@ -178,10 +180,10 @@ export default function SJLineTable({ lines, setLines, onDeleteLine }: SJLineTab
                                             <input
                                                 type="text"
                                                 value={line.binNum}
+                                                disabled={isLocked || !line.warehouseCode}
                                                 onChange={(e) => updateLineState(line.lineNum, 'binNum', e.target.value.toUpperCase())}
                                                 className={`${inputClass} pr-6 uppercase`}
                                                 placeholder={line.warehouseCode ? "Ketik/Pilih" : "-"}
-                                                disabled={!line.warehouseCode}
                                             />
 
                                             {/* SELECT TRIGGER: Hanya muncul jika ada opsi Bin */}
@@ -219,6 +221,7 @@ export default function SJLineTable({ lines, setLines, onDeleteLine }: SJLineTab
                                         <input
                                             type="number"
                                             value={line.qty}
+                                            disabled={isLocked}
                                             onChange={(e) => updateLineState(line.lineNum, 'qty', parseFloat(e.target.value) || 0)}
                                             className={`${readOnlyClass} text-center`}
                                         />
@@ -228,6 +231,7 @@ export default function SJLineTable({ lines, setLines, onDeleteLine }: SJLineTab
                                         <input
                                             type="text"
                                             value={line.comment}
+                                            disabled={isLocked}
                                             onChange={(e) => updateLineState(line.lineNum, 'comment', e.target.value)}
                                             className={inputClass}
                                             placeholder="..."
