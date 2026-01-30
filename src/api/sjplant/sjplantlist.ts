@@ -57,14 +57,9 @@ export async function getSJList(): Promise<ActionResponse> {
       let formattedDate = "-";
 
       if (item.UD100_Date01) {
-        formattedDate = new Date(item.UD100_Date01).toLocaleDateString(
-          "id-ID",
-          {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-          },
-        );
+        const datePart = item.UD100_Date01.split("T")[0];
+        const [year, month, day] = datePart.split("-");
+        formattedDate = `${day}/${month}/${year}`; 
       }
 
       return {
