@@ -8,6 +8,7 @@ import SJLineTable from './SJLineTable'
 import { getPartIum } from '@/api/sjplant/ium'
 import { getPartWarehouseList } from '@/api/sjplant/whse'
 import { getPartBinList } from '@/api/sjplant/bin'
+import { deleteLineWithLogs } from '@/api/sjplant/deleteline'
 
 const generateGuid = () => {
   if (crypto?.randomUUID) return crypto.randomUUID()
@@ -19,14 +20,15 @@ const generateGuid = () => {
 }
 
 interface LinesSectionProps {
-  lines: SjPlantLine[]
-  setLines: Dispatch<SetStateAction<SjPlantLine[]>>
+  lines: SjPlantLine[];
+  setLines: Dispatch<SetStateAction<SjPlantLine[]>>;
   scanLogs: SjScanLog[];
   setScanLogs: React.Dispatch<React.SetStateAction<SjScanLog[]>>;
-  shipFrom: string
+  shipFrom: string;
+  onRefresh: () => Promise<void>;
 }
 
-export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, shipFrom }: LinesSectionProps) {
+export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, shipFrom, onRefresh }: LinesSectionProps) {
   const getNextLogNum = (lineNum: number) => {
     const logsForLine = scanLogs.filter(l => l.lineNum === lineNum)
     return logsForLine.length > 0
@@ -169,13 +171,52 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, s
     setScanLogs(prev => [scanLog, ...prev])
   }
 
+  const handleDeleteLineLocal = (lineNum: number) => {
+    setLines(prev => prev.filter(l => l.lineNum !== lineNum))
+    setScanLogs(prev => prev.filter(l => l.lineNum !== lineNum))
+  }
+
+  const handleDeleteLine = async (line: SjPlantLine) => {
+    const confirm = window.confirm(
+      `Hapus line ${line.partNum} - ${line.lotNum}?`
+    )
+    if (!confirm) return
+
+    // BELUM TERSIMPAN (LOCAL)
+    if (!line.rawData) {
+      handleDeleteLineLocal(line.lineNum)
+      return
+    }
+
+    // CARI SEMUA LOG RAW YANG TERKAIT
+    const relatedLogRaws = scanLogs
+      .filter(
+        l =>
+          l.lineNum === line.lineNum &&
+          l.rawData // PASTI LOG YG SUDAH ADA DI DB
+      )
+      .map(l => l.rawData!)
+
+    const res = await deleteLineWithLogs(
+      line.rawData,
+      relatedLogRaws
+    )
+
+    if (!res.success) {
+      alert(res.message)
+      return
+    }
+
+    await onRefresh()
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-sm mt-2 p-6 border border-gray-200">
       <h3 className="font-bold text-lg text-gray-700 mb-4">Lines Detail</h3>
 
       <ScanInput onScan={handleProcessScan} />
 
-      <SJLineTable lines={lines} setLines={setLines} />
+      <SJLineTable lines={lines} setLines={setLines} onDeleteLine={handleDeleteLine} />
 
       <ScanResultTable items={scanLogs} />
     </div>

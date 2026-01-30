@@ -44,6 +44,7 @@ export interface SjScanLog {
   timestamp: string;  // Waktu scan
   status: string;
   isNew?: boolean;
+  rawData?: UD100ARawData;
 }
 
 export interface WarehouseOption {

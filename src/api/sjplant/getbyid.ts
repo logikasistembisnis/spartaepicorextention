@@ -105,6 +105,7 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
       timestamp: log.ShortChar03 || "",
       status: log.ShortChar07 ||"UNSHIP",
       isNew: false,
+      rawData: log,
     }));
 
     const initialLines: SjPlantLine[] = lineRecords.map((line) => {

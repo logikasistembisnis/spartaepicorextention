@@ -221,7 +221,7 @@ function EntryContent() {
         handleReturnShip();
     }, [returnTriggeredByUser]);
 
-    // --- LOGIC TOMBOL SIMPAN YANG DIPERBAIKI ---
+    // --- LOGIC TOMBOL SIMPAN  ---
     const handleSave = async () => {
         // 1. Validasi
         if (!headerData.shipFrom || !headerData.shipTo) {
@@ -465,7 +465,7 @@ function EntryContent() {
             </div>
 
             {/* Form Input Header */}
-            <div className="px-4">
+            <div>
                 <HeaderSection
                     data={headerData}
                     plantList={plantList}
@@ -474,7 +474,7 @@ function EntryContent() {
             </div>
 
             {/* Lines Section */}
-            <div className={`px-4 mt-6 transition-all duration-300 ${isLinesActive ? '' : 'opacity-50 pointer-events-none grayscale'}`}>
+            <div className={`mt-6 transition-all duration-300 ${isLinesActive ? '' : 'opacity-50 pointer-events-none grayscale'}`}>
                 {isLinesActive ? (
                     <LinesSection
                         lines={lines}
@@ -482,6 +482,7 @@ function EntryContent() {
                         scanLogs={logs}
                         setScanLogs={setLogs}
                         shipFrom={headerData.shipFrom}
+                        onRefresh={fetchHeaderData}
                     />
                 ) : (
                     <div className="p-8 bg-gray-50 rounded border-2 border-dashed border-gray-300 text-center text-gray-500">

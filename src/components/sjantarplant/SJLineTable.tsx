@@ -3,13 +3,15 @@
 import { Dispatch, SetStateAction } from 'react'
 import { SjPlantLine } from '@/types/sjPlant'
 import { getPartBinList } from '@/api/sjplant/bin'
+import { TrashIcon } from '@heroicons/react/24/outline'
 
 interface SJLineTableProps {
     lines: SjPlantLine[];
     setLines: Dispatch<SetStateAction<SjPlantLine[]>>;
+    onDeleteLine: (line: SjPlantLine) => void;
 }
 
-export default function SJLineTable({ lines, setLines }: SJLineTableProps) {
+export default function SJLineTable({ lines, setLines, onDeleteLine }: SJLineTableProps) {
 
     // Fungsi update data per baris (misal ganti Warehouse / Qty manual)
     const updateLineState = (id: number, field: keyof SjPlantLine, value: string | number) => {
@@ -86,6 +88,7 @@ export default function SJLineTable({ lines, setLines }: SJLineTableProps) {
                             <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-20">Qty Ship</th>
                             <th className="px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase min-w-37.5">Keterangan</th>
                             <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-20">Status</th>
+                            <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-12">Aksi</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -236,6 +239,17 @@ export default function SJLineTable({ lines, setLines }: SJLineTableProps) {
                                         <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-semibold border border-blue-200">
                                             {line.status}
                                         </span>
+                                    </td>
+
+                                    {/* Hapus line */}
+                                    <td className="px-2 py-2 text-center">
+                                        <button
+                                            onClick={() => onDeleteLine(line)}
+                                            className="text-red-600 hover:text-red-800"
+                                            title="Hapus Line"
+                                        >
+                                            <TrashIcon className="h-4 w-4" />
+                                        </button>
                                     </td>
                                 </tr>
                             ))
