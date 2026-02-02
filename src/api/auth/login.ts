@@ -54,6 +54,6 @@ export async function loginAction(
     }
   } catch (err) {
     console.error("Login error:", err);
-    return { error: "Terjadi kesalahan koneksi." };
+    return { error: "Terjadi kesalahan." };
   }
 }
