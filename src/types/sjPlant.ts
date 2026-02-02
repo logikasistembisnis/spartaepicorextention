@@ -13,6 +13,9 @@ export type SjPlantHeader = {
   sysRevID?: number;
   bitFlag?: number;
   rowMod?: string;
+  receiptDate?: string;
+  isReceived?: boolean;
+  rcvComment?: string;
 }
 
 export type SjPlantLine = {
@@ -71,10 +74,13 @@ export interface UD100RawData {
   ShortChar10: string; // Username
   Date01: string | null; // ActualShipDate
   Date02: string | null; // ShipDate
+  Date03: string | null;
   Date20: string | null; // CreatedDate
   CheckBox01: boolean; // IsShipped
+  CheckBox02: boolean | null; // IsReceived
   CheckBox05: boolean; // IsTgp
   Character01: string; // Comment
+  Character02: string | null; // Rcv Comment
   Number20: number; // Counter
   SysRowID: string;
   SysRevID: number;

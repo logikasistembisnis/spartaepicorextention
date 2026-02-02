@@ -41,6 +41,8 @@ export async function updateHeaderToUD100(
       Character01: headerData.comment,
       CheckBox05: headerData.isTgp,
       CheckBox01: headerData.isShipped,
+      CheckBox02: headerData.isReceived ?? false,
+      Character02: headerData.rcvComment ?? "",
 
       // Logic Date (Pastikan null safety karena index signature bisa return undefined)
       Date01: ensureIsoDate(
@@ -50,6 +52,10 @@ export async function updateHeaderToUD100(
       Date02: ensureIsoDate(
         headerData.shipDate,
         rawData.Date02 as string | null,
+      ),
+      Date03: ensureIsoDate(
+        headerData.receiptDate ?? "",
+        rawData.Date03 as string | null,
       ),
 
       RowMod: "U",

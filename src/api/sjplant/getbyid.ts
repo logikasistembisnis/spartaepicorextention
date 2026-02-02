@@ -83,6 +83,9 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
       sysRevID: raw.SysRevID,
       bitFlag: raw.BitFlag,
       rowMod: "U",
+      receiptDate: raw.Date03 ? raw.Date03.split("T")[0] : "",
+      isReceived: raw.CheckBox02 || false,
+      rcvComment: raw.Character02 || "",
     };
 
     const ud100aList = (result.returnObj.UD100A || []) as UD100ARawData[];

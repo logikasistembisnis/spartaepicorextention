@@ -105,18 +105,7 @@ export default function RcvAntarPlant() {
     return (
         <div className="space-y-4">
             {/* --- HEADER SECTION --- */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h2 className="text-xl font-bold text-gray-800 tracking-tight">Receipt Antar Plant</h2>
-                <div>
-                    <button
-                        onClick={() => router.push('/receiptplant/entry')}
-                        className="flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors w-full sm:w-auto"
-                    >
-                        <PlusIcon className="h-5 w-5" />
-                        <span>Add New</span>
-                    </button>
-                </div>
-            </div>
+            <h2 className="text-xl font-bold text-gray-800 tracking-tight">Receipt Antar Plant</h2>
 
             {/* --- SEARCH FILTER --- */}
             <div className="relative">
