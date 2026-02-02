@@ -145,7 +145,15 @@ function EntryContent() {
                     Date: `${headerData.shipDate}T00:00:00`,
                 });
 
-                alert(result.output || "Inventory Transfer Success");
+                if (!result.success) {
+                    alert(result.message);
+
+                    setHeaderData(prev => ({ ...prev, isShipped: false }));
+                    setShipTriggeredByUser(false);
+                    return;
+                }
+
+                alert(result.message);
                 setHasPostedShipped(true);
                 setShipTriggeredByUser(false);
 
@@ -195,7 +203,15 @@ function EntryContent() {
                     Date: `${headerData.shipDate}T00:00:00`,
                 });
 
-                alert(result.output || "Return Inventory Transfer Success");
+                if (!result.success) {
+                    alert(result.message);
+
+                    setHeaderData(prev => ({ ...prev, isShipped: true }));
+                    setReturnTriggeredByUser(false);
+                    return;
+                }
+
+                alert(result.message);
                 setReturnTriggeredByUser(false);
                 setHasPostedShipped(false);
 

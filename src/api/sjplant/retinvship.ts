@@ -20,9 +20,27 @@ export async function RetInvShip(payload: {
             method: "POST",
             authHeader,
             requireLicense: true,
+            apiMode: "epicor",
             body: JSON.stringify({ ...payload, Check: false })
         }
     );
 
-    return await res.json();
+    const data = await res.json();
+    // JIKA EPICOR ERROR
+    if (!res.ok) {
+        return {
+            success: false,
+            message:
+                data?.ErrorMessage ||
+                data?.ErrorDetails?.[0]?.Message ||
+                "Inventory Transfer gagal"
+        };
+    }
+
+    // JIKA SUKSES
+    return {
+        success: true,
+        message: data?.output || "Inventory Transfer Success"
+    };
 }
+

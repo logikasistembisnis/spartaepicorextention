@@ -1,6 +1,7 @@
 type ApiFetchOptions = RequestInit & {
   requireLicense?: boolean;
   authHeader?: string;
+  apiMode?: "strict" | "epicor";
 };
 
 export async function apiFetch(
@@ -31,7 +32,8 @@ export async function apiFetch(
     cache: "no-store",
   });
 
-  if (!response.ok) {
+  // DEFAULT: STRICT
+  if (!response.ok && options.apiMode !== "epicor") {
     throw new Error(`API Error: ${response.status} ${response.statusText}`);
   }
 

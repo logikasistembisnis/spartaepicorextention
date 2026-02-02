@@ -47,7 +47,7 @@ export default function SJAntarPlant() {
     )
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             {/* --- HEADER SECTION --- */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <h2 className="text-xl font-bold text-gray-800 tracking-tight">SJ Antar Plant</h2>
