@@ -106,7 +106,7 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
       qty: Number(log.Number01) || 0,
       qrCode: log.Character01 || "",
       timestamp: log.ShortChar03 || "",
-      status: log.ShortChar07 ||"UNSHIP",
+      status: log.ShortChar07 || "UNSHIP",
       isNew: false,
       rawData: log,
     }));
@@ -122,11 +122,12 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
         binNum: line.ShortChar05 || "",
         qty: Number(line.Number01) || 0,
         comment: line.ShortChar06 || "",
-        status: line.ShortChar07 ||"UNSHIP",
+        status: line.ShortChar07 || "UNSHIP",
         rcvComment: line.Character02 || "",
         binTo: line.Character03 || "",
         whTo: line.ShortChar08 || "",
         shipTo: line.ShortChar09 || "",
+        qtyHitung: Number(line.Number02) || 0,
         availableWarehouses: [],
         availableBins: [],
         rawData: line,
@@ -139,10 +140,10 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
         let binOptions: BinOption[] = [];
 
         // A. FETCH WAREHOUSE LIST
-        if (line.partNum && headerData.shipFrom) {
+        if (line.partNum && headerData.shipTo) {
           const whRes = await getPartWarehouseList(
             line.partNum,
-            headerData.shipFrom,
+            headerData.shipTo,
           );
 
           if (whRes.success && whRes.data) {
@@ -155,12 +156,8 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
         }
 
         // B. FETCH BIN LIST
-        if (line.partNum && line.warehouseCode) {
-          const binRes = await getPartBinList(
-            line.partNum,
-            line.warehouseCode,
-            "",
-          );
+        if (line.partNum && line.whTo) {
+          const binRes = await getPartBinList(line.partNum, line.whTo, "");
 
           const rawBins = binRes.success && binRes.data ? binRes.data : [];
 

@@ -8,11 +8,9 @@ import { SjPlantHeader, SjPlantLine, UD100RawData, SjScanLog } from '@/types/sjP
 import { ArrowLeftIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { getPlantsList, ApiShip } from '@/api/sjplant/ship'
-import { getHeaderById } from '@/api/sjplant/getbyid'
+import { getHeaderById } from '@/api/rcvplant/getbyid'
 import { updateHeaderToUD100 } from '@/api/sjplant/updateheader'
-import { addLinesToUD100, ParentKeys } from '@/api/sjplant/addlines';
-import { updateLineToUD100A } from '@/api/sjplant/updateline';
-import { checkGuidExists } from "@/api/sjplant/checkguid";
+import { updateLineToUD100A } from '@/api/rcvplant/updateline';
 import { InvShip } from "@/api/sjplant/invship";
 import { RetInvShip } from '@/api/sjplant/retinvship'
 import { pdf } from "@react-pdf/renderer";
@@ -103,8 +101,8 @@ function RcvPlantContent() {
     ) => {
         // DETEKSI perubahan checkbox shipped oleh USER
         if (
-            field === 'isShipped' &&
-            headerData.isShipped === false &&
+            field === 'isReceived' &&
+            headerData.isReceived === false &&
             value === true
         ) {
             setShipTriggeredByUser(true);
@@ -112,8 +110,8 @@ function RcvPlantContent() {
 
         // USER UNCHECK SHIP (RETURN)
         if (
-            field === 'isShipped' &&
-            headerData.isShipped === true &&
+            field === 'isReceived' &&
+            headerData.isReceived === true &&
             value === false
         ) {
             setReturnTriggeredByUser(true);
@@ -132,7 +130,7 @@ function RcvPlantContent() {
 
         if (!headerData.shipFrom || !headerData.shipTo) {
             alert("Ship From dan Ship To wajib diisi");
-            setHeaderData(prev => ({ ...prev, isShipped: false }));
+            setHeaderData(prev => ({ ...prev, isReceived: false }));
             setShipTriggeredByUser(false);
             return;
         }
@@ -150,7 +148,7 @@ function RcvPlantContent() {
                 if (!result.success) {
                     alert(result.message);
 
-                    setHeaderData(prev => ({ ...prev, isShipped: false }));
+                    setHeaderData(prev => ({ ...prev, isReceived: false }));
                     setShipTriggeredByUser(false);
                     return;
                 }
@@ -161,7 +159,7 @@ function RcvPlantContent() {
 
                 if (rawData) {
                     await updateHeaderToUD100(
-                        { ...headerData, status: "SHIPPED", isShipped: true },
+                        { ...headerData, status: "SHIPPED", isReceived: true },
                         rawData
                     );
                 }
@@ -170,7 +168,7 @@ function RcvPlantContent() {
 
             } catch (e) {
                 alert(e instanceof Error ? e.message : "Gagal");
-                setHeaderData(prev => ({ ...prev, isShipped: false }));
+                setHeaderData(prev => ({ ...prev, isReceived: false }));
                 setShipTriggeredByUser(false);
             } finally {
                 setIsPostingShipped(false);
@@ -190,7 +188,7 @@ function RcvPlantContent() {
 
         if (!headerData.shipFrom || !headerData.shipTo) {
             alert("Ship From dan Ship To wajib diisi");
-            setHeaderData(prev => ({ ...prev, isShipped: true }));
+            setHeaderData(prev => ({ ...prev, isReceived: true }));
             setReturnTriggeredByUser(false);
             return;
         }
@@ -208,7 +206,7 @@ function RcvPlantContent() {
                 if (!result.success) {
                     alert(result.message);
 
-                    setHeaderData(prev => ({ ...prev, isShipped: true }));
+                    setHeaderData(prev => ({ ...prev, isReceived: true }));
                     setReturnTriggeredByUser(false);
                     return;
                 }
@@ -219,7 +217,7 @@ function RcvPlantContent() {
 
                 if (rawData) {
                     await updateHeaderToUD100(
-                        { ...headerData, status: "OPEN", isShipped: false },
+                        { ...headerData, status: "OPEN", isReceived: false },
                         rawData
                     );
                 }
@@ -229,7 +227,7 @@ function RcvPlantContent() {
             } catch (e) {
                 alert(e instanceof Error ? e.message : "Gagal return inventory");
                 // rollback UI
-                setHeaderData(prev => ({ ...prev, isShipped: true }));
+                setHeaderData(prev => ({ ...prev, isReceived: true }));
                 setReturnTriggeredByUser(false);
             } finally {
                 setIsPostingShipped(false);
@@ -250,7 +248,6 @@ function RcvPlantContent() {
         setIsSaving(true);
         try {
             const isEditMode = !!packNumParam && !!rawData;
-            let currentParentKeys: ParentKeys | null = null;
 
             if (!rawData) {
                 alert("Data asli hilang, silakan refresh halaman.");
@@ -263,74 +260,22 @@ function RcvPlantContent() {
                 throw new Error("Gagal Update Header: " + resHeader.message);
             }
 
-            // Siapkan Key untuk Lines dari data lama
-            currentParentKeys = {
-                Company: rawData.Company,
-                Key1: rawData.Key1,
-                Key2: rawData.Key2,
-                Key3: rawData.Key3,
-                Key4: rawData.Key4,
-                Key5: rawData.Key5,
-                ShipFrom: headerData.shipFrom,
-                ShipTo: headerData.shipTo
-            };
-
-            if (currentParentKeys && lines.length > 0) {
-
-                const newLines = lines.filter(l => !l.rawData);
-                const existingLines = lines.filter(l => !!l.rawData);
-
+            if (lines.length > 0) {
                 const errorMessages: string[] = [];
 
-                // 2. Add New Lines (Batch)
-                if (newLines.length > 0) {
-                    const relevantLogs = logs.filter(
-                        log => log.isNew && newLines.some(nl => nl.lineNum === log.lineNum)
-                    );
+                // hanya update line yang sudah ada (punya rawData)
+                const existingLines = lines.filter(l => !!l.rawData);
 
-                    // Kumpulin semua GUID baru
-                    const newGuids = logs
-                        .filter(l => l.isNew && l.guid)
-                        .map(l => l.guid);
-
-                    // Cek satu-satu 
-                    for (const guid of newGuids) {
-                        const check = await checkGuidExists(guid);
-
-                        if (!check.success) {
-                            alert("Gagal validasi GUID");
-                            return;
-                        }
-
-                        if (check.exists) {
-                            alert(`QR Code dengan GUID ${guid} sudah pernah discan!`);
-                            await fetchHeaderData();
-                            return; // STOP TOTAL
-                        }
-                    }
-
-                    const resAddLines = await addLinesToUD100(currentParentKeys, newLines, relevantLogs);
-                    if (!resAddLines.success) {
-                        errorMessages.push(`Gagal tambah barang baru: ${resAddLines.message}`);
-                    }
-                }
-
-                // 3. Update Existing Lines (Looping)
                 if (existingLines.length > 0) {
-                    // Gunakan Promise.all agar update berjalan paralel (lebih cepat)
-                    const updatePromises = existingLines.map(line => {
-                        const newLogsForThisLine = logs.filter(
-                            log => log.lineNum === line.lineNum && log.isNew
-                        );
-                        return updateLineToUD100A(
-                            { ...line, pendingLogs: newLogsForThisLine },
+                    const updatePromises = existingLines.map(line =>
+                        updateLineToUD100A(
+                            line,
                             line.rawData!
                         )
-                    });
+                    );
 
                     const results = await Promise.all(updatePromises);
 
-                    // Cek jika ada yang gagal
                     const failed = results.filter(r => !r.success);
                     if (failed.length > 0) {
                         errorMessages.push(`Gagal update ${failed.length} baris barang.`);
@@ -338,40 +283,31 @@ function RcvPlantContent() {
                 }
 
                 if (errorMessages.length > 0) {
-                    alert(`Header tersimpan, tapi ada masalah di Lines:\n${errorMessages.join('\n')}`);
+                    alert(
+                        `Header tersimpan, tapi ada masalah di Lines:\n${errorMessages.join("\n")}`
+                    );
                 } else {
                     alert("Simpan Berhasil!");
                     await fetchHeaderData();
                     return;
                 }
             } else {
-                // Header sukses, lines kosong
+                // header saja, tanpa lines
                 alert("Simpan Berhasil!");
-            }
-
-            if (isEditMode) {
-                // Jika edit mode, reload untuk refresh data (termasuk lines yg baru masuk)
-                window.location.reload();
-            } else if (currentParentKeys) {
-                // Jika add mode, pindah ke halaman edit dengan ID baru
-                router.replace(`/receiptplant/entry?id=${currentParentKeys.Key1}`);
             }
 
         } catch (error: unknown) {
             console.error("Process Error:", error);
 
             let msg = "Terjadi kesalahan sistem.";
-            if (error instanceof Error) {
-                msg = error.message;
-            } else if (typeof error === "string") {
-                msg = error;
-            }
+            if (error instanceof Error) msg = error.message;
+            else if (typeof error === "string") msg = error;
 
             alert(msg);
         } finally {
             setIsSaving(false);
         }
-    }
+    };
 
     const handlePrintSuratJalan = async () => {
         if (!headerData.packNum) {
@@ -460,7 +396,7 @@ function RcvPlantContent() {
                     data={headerData}
                     plantList={plantList}
                     onChange={handleHeaderChange}
-                    isLocked={headerData.isReceived}
+                    isLocked={headerData.isReceived ?? false}
                 />
             </div>
 
@@ -472,9 +408,8 @@ function RcvPlantContent() {
                         setLines={setLines}
                         scanLogs={logs}
                         setScanLogs={setLogs}
-                        shipFrom={headerData.shipFrom}
-                        onRefresh={fetchHeaderData}
-                        isLocked={headerData.isShipped}
+                        shipTo={headerData.shipTo}
+                        isLocked={headerData.isReceived ?? false}
                     />
                 ) : (
                     <div className="p-8 bg-gray-50 rounded border-2 border-dashed border-gray-300 text-center text-gray-500">

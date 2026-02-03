@@ -1,18 +1,58 @@
 'use client'
 
-import { Dispatch, SetStateAction } from 'react'
+import { Dispatch, SetStateAction, useEffect, useCallback } from 'react'
 import { SjPlantLine } from '@/types/sjPlant'
-import { getPartBinList } from '@/api/sjplant/bin'
-import { TrashIcon } from '@heroicons/react/24/outline'
+import { getPartBinList } from '@/api/rcvplant/bin'
+import { getPartWarehouseList } from '@/api/rcvplant/whse'
 
 interface SJLineTableProps {
     lines: SjPlantLine[];
     setLines: Dispatch<SetStateAction<SjPlantLine[]>>;
-    onDeleteLine: (line: SjPlantLine) => void;
     isLocked: boolean;
 }
 
-export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }: SJLineTableProps) {
+export default function SJLineTable({ lines, setLines, isLocked }: SJLineTableProps) {
+
+    useEffect(() => {
+        const fetchAllWarehouses = async () => {
+            // Kita gunakan map untuk menjalankan fetch secara paralel
+            const updatedLines = await Promise.all(lines.map(async (line) => {
+                // Jika sudah ada list warehouse-nya, tidak perlu ambil lagi
+                if (line.availableWarehouses && line.availableWarehouses.length > 0) {
+                    return line;
+                }
+
+                // Ambil data warehouse berdasarkan PartNum dan ShipTo (Alamat)
+                const resWh = await getPartWarehouseList(line.partNum, line.shipTo || '');
+
+                if (resWh.success && resWh.data) {
+                    return {
+                        ...line,
+                        availableWarehouses: resWh.data.map(w => ({
+                            code: w.PartWhse_WarehouseCode,
+                            name: w.Warehse_Description
+                        }))
+                    };
+                }
+                return line;
+            }));
+
+            // Bandingkan untuk menghindari infinite loop: 
+            // Update state hanya jika data availableWarehouses benar-benar baru terisi
+            const isDifferent = updatedLines.some((l, idx) =>
+                l.availableWarehouses?.length !== lines[idx].availableWarehouses?.length
+            );
+
+            if (isDifferent) {
+                setLines(updatedLines);
+            }
+        };
+
+        if (lines.length > 0 && !isLocked) {
+            fetchAllWarehouses();
+        }
+    }, [lines.length, isLocked, setLines]);
+
 
     const updateLineState = (id: number, field: keyof SjPlantLine, value: string | number) => {
         setLines((prevLines) => prevLines.map(line => {
@@ -24,18 +64,26 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
     }
 
     const handleWarehouseChange = async (id: number, newWhseCode: string) => {
+        // Cari data line yang sedang diubah
         const currentLine = lines.find(l => l.lineNum === id);
         if (!currentLine) return;
 
+        // 1. Update UI Warehouse & Reset Bin segera
         setLines(prev => prev.map(line => {
             if (line.lineNum === id) {
-                return { ...line, warehouseCode: newWhseCode, binNum: '', availableBins: [] }
+                return {
+                    ...line,
+                    whTo: newWhseCode,
+                    binTo: '',
+                    availableBins: []
+                }
             }
             return line;
         }));
 
         if (!newWhseCode) return;
 
+        // 2. Fetch Bin berdasarkan Warehouse baru
         const resBin = await getPartBinList(currentLine.partNum, newWhseCode, currentLine.lotNum);
 
         if (resBin.success && resBin.data) {
@@ -45,12 +93,14 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
                 qty: b.QtyOnHand
             }));
 
+            // 3. Update state dengan pilihan Bin yang baru
             setLines(prev => prev.map(line => {
                 if (line.lineNum === id) {
                     return {
                         ...line,
                         availableBins: newBinOptions,
-                        binNum: newBinOptions.length === 1 ? newBinOptions[0].code : ''
+                        // Jika bin cuma ada 1, otomatis pilihkan
+                        binTo: newBinOptions.length === 1 ? newBinOptions[0].code : ''
                     }
                 }
                 return line;
@@ -62,7 +112,7 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
     const inputClass = "w-full text-xs border-gray-200 rounded focus:ring-blue-500 focus:border-blue-500 p-1 text-gray-700 bg-white";
     const selectClass = "w-full text-xs border-gray-200 rounded focus:ring-blue-500 focus:border-blue-500 p-1 text-gray-700 bg-white";
     const readOnlyClass = "w-full text-xs bg-gray-50 border-none p-1 text-gray-500 font-medium cursor-default";
-    
+
     // Helper class untuk header agar tidak terlalu panjang di kodingan bawah
     // Menggunakan w-[..px] dan min-w-[..px] agar kolom kaku (fixed)
     const thClass = "px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase bg-gray-50 border-b border-gray-200";
@@ -72,34 +122,33 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
             <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
                 <h3 className="text-sm font-bold text-gray-700">Line Data</h3>
             </div>
-            
+
             {/* Container Scroll Horizontal */}
             <div className="overflow-x-auto">
                 {/* min-w-max memaksa tabel melebar sesuai total lebar kolom */}
                 <table className="min-w-max divide-y divide-gray-200">
                     <thead>
                         <tr>
-                            <th className={`${thClass} text-center w-[50px] min-w-[50px]`}>Line</th>
-                            <th className={`${thClass} w-[150px] min-w-[150px]`}>Part No</th>
-                            <th className={`${thClass} w-[250px] min-w-[250px]`}>Part Desc</th>
-                            <th className={`${thClass} text-center w-[60px] min-w-[60px]`}>IUM</th>
-                            <th className={`${thClass} w-[120px] min-w-[120px]`}>Lot Number</th>
-                            <th className={`${thClass} w-[120px] min-w-[120px]`}>Ship To</th>
-                            <th className={`${thClass} w-[140px] min-w-[140px]`}>Wh To</th>
-                            <th className={`${thClass} w-[140px] min-w-[140px]`}>Bin To</th>
-                            <th className={`${thClass} text-center w-[90px] min-w-[90px]`}>Qty Ship</th>
-                            <th className={`${thClass} text-center w-[90px] min-w-[90px]`}>Qty Terima</th>
-                            <th className={`${thClass} text-center w-[90px] min-w-[90px]`}>Qty Hitung</th>
-                            <th className={`${thClass} w-[200px] min-w-[200px]`}>Ket Receive</th>
-                            <th className={`${thClass} w-[200px] min-w-[200px]`}>Ket Shipment</th>
-                            <th className={`${thClass} text-center w-[60px] min-w-[60px]`}>Aksi</th>
+                            <th className={`${thClass} text-center w-12.5 min-w-12.5`}>Line</th>
+                            <th className={`${thClass} w-37.5 min-w-37.5`}>Part Number</th>
+                            <th className={`${thClass} w-62.5 min-w-62.5`}>Part Description</th>
+                            <th className={`${thClass} text-center w-15 min-w-15`}>IUM</th>
+                            <th className={`${thClass} w-30 min-w-30`}>Lot Number</th>
+                            <th className={`${thClass} w-30 min-w-30`}>Ship To</th>
+                            <th className={`${thClass} w-35 min-w-35`}>WH To</th>
+                            <th className={`${thClass} w-35 min-w-35`}>Bin To</th>
+                            <th className={`${thClass} text-center w-22.5 min-w-22.5`}>Qty Ship</th>
+                            <th className={`${thClass} text-center w-22.5 min-w-22.5`}>Qty Terima</th>
+                            <th className={`${thClass} text-center w-22.5 min-w-22.5`}>Qty Hitung</th>
+                            <th className={`${thClass} w-50 min-w-50`}>Keterangan Receive</th>
+                            <th className={`${thClass} w-50 min-w-50`}>Keterangan Shipment</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {lines.length === 0 ? (
                             <tr>
-                                <td colSpan={14} className="text-center py-6 text-gray-400 text-sm italic bg-gray-50">
-                                    Belum ada data. Silakan isi scan pada kolom input di atas.
+                                <td colSpan={8} className="text-center py-6 text-gray-400 text-sm italic bg-gray-50">
+                                    Belum ada data.
                                 </td>
                             </tr>
                         ) : (
@@ -132,13 +181,13 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
 
                                     {/* 6. Ship To (ReadOnly) */}
                                     <td className="px-2 py-2">
-                                        <input type="text" value={(line as any).shipTo || ''} readOnly className={readOnlyClass} />
+                                        <input type="text" value={line.shipTo} readOnly className={readOnlyClass} title={line.shipTo} />
                                     </td>
 
                                     {/* 7. Wh To (Dropdown) */}
                                     <td className="px-2 py-2">
                                         <select
-                                            value={line.warehouseCode}
+                                            value={line.whTo}
                                             onChange={(e) => handleWarehouseChange(line.lineNum, e.target.value)}
                                             className={selectClass}
                                             disabled={isLocked}
@@ -155,11 +204,11 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
                                         <div className="relative w-full">
                                             <input
                                                 type="text"
-                                                value={line.binNum}
-                                                disabled={isLocked || !line.warehouseCode}
-                                                onChange={(e) => updateLineState(line.lineNum, 'binNum', e.target.value.toUpperCase())}
+                                                value={line.binTo}
+                                                disabled={isLocked || !line.whTo}
+                                                onChange={(e) => updateLineState(line.lineNum, 'binTo', e.target.value.toUpperCase())}
                                                 className={`${inputClass} pr-6 uppercase`}
-                                                placeholder={line.warehouseCode ? "Ketik/Pilih" : "-"}
+                                                placeholder={line.whTo ? "Ketik/Pilih" : "-"}
                                             />
                                             {line.availableBins && line.availableBins.length > 0 && (
                                                 <>
@@ -169,8 +218,8 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
                                                     <select
                                                         className="absolute inset-y-0 right-0 w-8 opacity-0 cursor-pointer text-xs"
                                                         value=""
-                                                        onChange={(e) => e.target.value && updateLineState(line.lineNum, 'binNum', e.target.value)}
-                                                        disabled={!line.warehouseCode}
+                                                        onChange={(e) => e.target.value && updateLineState(line.lineNum, 'binTo', e.target.value)}
+                                                        disabled={!line.whTo}
                                                     >
                                                         <option value="" disabled>Pilih Bin</option>
                                                         {line.availableBins.map((bin) => (
@@ -191,10 +240,9 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
                                     <td className="px-2 py-2">
                                         <input
                                             type="number"
-                                            value={(line as any).qtyReceived ?? ''}
-                                            disabled={isLocked}
-                                            onChange={(e) => updateLineState(line.lineNum, 'qtyReceived' as any, parseFloat(e.target.value) || 0)}
-                                            className={`${inputClass} text-center bg-yellow-50`}
+                                            value={line.qty}
+                                            readOnly
+                                            className={`${readOnlyClass} text-center`}
                                         />
                                     </td>
 
@@ -202,9 +250,9 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
                                     <td className="px-2 py-2">
                                         <input
                                             type="number"
-                                            value={(line as any).qtyCounted ?? ''}
+                                            value={line.qtyHitung ?? ''}
                                             disabled={isLocked}
-                                            onChange={(e) => updateLineState(line.lineNum, 'qtyCounted' as any, parseFloat(e.target.value) || 0)}
+                                            onChange={(e) => updateLineState(line.lineNum, 'qtyHitung', parseFloat(e.target.value) || 0)}
                                             className={`${inputClass} text-center`}
                                         />
                                     </td>
@@ -213,9 +261,9 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
                                     <td className="px-2 py-2">
                                         <input
                                             type="text"
-                                            value={(line as any).rcvComment || ''}
+                                            value={line.rcvComment || ''}
                                             disabled={isLocked}
-                                            onChange={(e) => updateLineState(line.lineNum, 'rcvComment' as any, e.target.value)}
+                                            onChange={(e) => updateLineState(line.lineNum, 'rcvComment', e.target.value)}
                                             className={inputClass}
                                             placeholder="Catatan..."
                                         />
@@ -224,13 +272,6 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
                                     {/* 13. Ket Shipment */}
                                     <td className="px-2 py-2">
                                         <input type="text" value={line.comment} readOnly className={readOnlyClass} title={line.comment} />
-                                    </td>
-
-                                    {/* Aksi */}
-                                    <td className="px-2 py-2 text-center">
-                                        <button onClick={() => onDeleteLine(line)} className="text-red-600 hover:text-red-800" title="Hapus Line">
-                                            <TrashIcon className="h-4 w-4" />
-                                        </button>
                                     </td>
                                 </tr>
                             ))

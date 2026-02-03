@@ -29,6 +29,11 @@ export type SjPlantLine = {
   qty: number;
   comment: string;
   status: string;
+  rcvComment?: string;
+  binTo?: string;
+  whTo?: string;
+  shipTo?: string;
+  qtyHitung?: number;
   availableWarehouses?: WarehouseOption[];   
   availableBins?: BinOption[];
   rawData?: UD100ARawData;
@@ -115,10 +120,12 @@ export interface UD100ARawData {
   ShortChar05?: string;
   ShortChar06?: string;
   ShortChar07?: string;
+  ShortChar08?: string;
   ShortChar09?: string;
   ShortChar10?: string;
   CheckBox20?: boolean;
   Number01?: number;
+  Number02?: number;
   SysRowID?: string;
   RowMod: string;
 }

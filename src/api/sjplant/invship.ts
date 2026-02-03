@@ -15,7 +15,7 @@ export async function InvShip(payload: {
     if (!authHeader) return { success: false, message: "Unauthorized" };
 
     const res = await apiFetch(
-        "/v2/efx/166075/UDNELSJAntarPlant/InventoryTransfer",
+        "/v2/efx/166075/UDGSSJAntarPlant/InventoryTransfer",
         {
             method: "POST",
             authHeader,
