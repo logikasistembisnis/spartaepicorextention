@@ -14,7 +14,6 @@ interface SJLineTableProps {
 
 export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }: SJLineTableProps) {
 
-    // Fungsi update data per baris (misal ganti Warehouse / Qty manual)
     const updateLineState = (id: number, field: keyof SjPlantLine, value: string | number) => {
         setLines((prevLines) => prevLines.map(line => {
             if (line.lineNum === id) {
@@ -25,11 +24,9 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
     }
 
     const handleWarehouseChange = async (id: number, newWhseCode: string) => {
-        // 1. Cari baris yang sedang diedit untuk ambil PartNum & LotNum
         const currentLine = lines.find(l => l.lineNum === id);
         if (!currentLine) return;
 
-        // 2. Update Warehouse Code dulu di UI (biar responsif), dan kosongkan BinNum
         setLines(prev => prev.map(line => {
             if (line.lineNum === id) {
                 return { ...line, warehouseCode: newWhseCode, binNum: '', availableBins: [] }
@@ -37,13 +34,10 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
             return line;
         }));
 
-        // 3. Jika user memilih "Pilih Wh" (kosong), stop di sini
         if (!newWhseCode) return;
 
-        // 4. Panggil API Fetch Bin
         const resBin = await getPartBinList(currentLine.partNum, newWhseCode, currentLine.lotNum);
 
-        // 5. Update State dengan hasil Bin baru
         if (resBin.success && resBin.data) {
             const newBinOptions = resBin.data.map(b => ({
                 code: b.BinNum,
@@ -56,7 +50,6 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
                     return {
                         ...line,
                         availableBins: newBinOptions,
-                        // UX: Jika cuma ada 1 bin, otomatis pilih
                         binNum: newBinOptions.length === 1 ? newBinOptions[0].code : ''
                     }
                 }
@@ -69,112 +62,95 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
     const inputClass = "w-full text-xs border-gray-200 rounded focus:ring-blue-500 focus:border-blue-500 p-1 text-gray-700 bg-white";
     const selectClass = "w-full text-xs border-gray-200 rounded focus:ring-blue-500 focus:border-blue-500 p-1 text-gray-700 bg-white";
     const readOnlyClass = "w-full text-xs bg-gray-50 border-none p-1 text-gray-500 font-medium cursor-default";
+    
+    // Helper class untuk header agar tidak terlalu panjang di kodingan bawah
+    // Menggunakan w-[..px] dan min-w-[..px] agar kolom kaku (fixed)
+    const thClass = "px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase bg-gray-50 border-b border-gray-200";
 
     return (
         <div className="mt-4 mb-4 border border-gray-200 rounded-lg shadow-sm">
             <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
                 <h3 className="text-sm font-bold text-gray-700">Line Data</h3>
             </div>
+            
+            {/* Container Scroll Horizontal */}
             <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                {/* min-w-max memaksa tabel melebar sesuai total lebar kolom */}
+                <table className="min-w-max divide-y divide-gray-200">
+                    <thead>
                         <tr>
-                            <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-10">Line</th>
-                            <th className="px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase min-w-30">Part Number</th>
-                            <th className="px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase min-w-37.5">Part Desc</th>
-                            <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-16">IUM</th>
-                            <th className="px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase w-28">Wh From</th>
-                            <th className="px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase min-w-25">Lot Num</th>
-                            <th className="px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase w-28">Bin From</th>
-                            <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-20">Qty Ship</th>
-                            <th className="px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase min-w-37.5">Keterangan</th>
-                            <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-20">Status</th>
-                            <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-12">Aksi</th>
+                            <th className={`${thClass} text-center w-[50px] min-w-[50px]`}>Line</th>
+                            <th className={`${thClass} w-[150px] min-w-[150px]`}>Part No</th>
+                            <th className={`${thClass} w-[250px] min-w-[250px]`}>Part Desc</th>
+                            <th className={`${thClass} text-center w-[60px] min-w-[60px]`}>IUM</th>
+                            <th className={`${thClass} w-[120px] min-w-[120px]`}>Lot Number</th>
+                            <th className={`${thClass} w-[120px] min-w-[120px]`}>Ship To</th>
+                            <th className={`${thClass} w-[140px] min-w-[140px]`}>Wh To</th>
+                            <th className={`${thClass} w-[140px] min-w-[140px]`}>Bin To</th>
+                            <th className={`${thClass} text-center w-[90px] min-w-[90px]`}>Qty Ship</th>
+                            <th className={`${thClass} text-center w-[90px] min-w-[90px]`}>Qty Terima</th>
+                            <th className={`${thClass} text-center w-[90px] min-w-[90px]`}>Qty Hitung</th>
+                            <th className={`${thClass} w-[200px] min-w-[200px]`}>Ket Receive</th>
+                            <th className={`${thClass} w-[200px] min-w-[200px]`}>Ket Shipment</th>
+                            <th className={`${thClass} text-center w-[60px] min-w-[60px]`}>Aksi</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {lines.length === 0 ? (
                             <tr>
-                                <td colSpan={11} className="text-center py-6 text-gray-400 text-sm italic bg-gray-50">
+                                <td colSpan={14} className="text-center py-6 text-gray-400 text-sm italic bg-gray-50">
                                     Belum ada data. Silakan isi scan pada kolom input di atas.
                                 </td>
                             </tr>
                         ) : (
                             lines.map((line, idx) => (
                                 <tr key={line.lineNum} className="hover:bg-blue-50 transition-colors">
-                                    {/* 1. Line (Auto numbering based on array index for display) */}
+                                    {/* 1. Line */}
                                     <td className="px-2 py-2 text-center text-xs text-gray-500">
                                         {lines.length - idx}
                                     </td>
 
-                                    {/* 2. Part Num (Read Only dari Scan) */}
+                                    {/* 2. Part Number */}
                                     <td className="px-2 py-2">
-                                        <input
-                                            type="text"
-                                            value={line.partNum}
-                                            readOnly
-                                            className={readOnlyClass}
-                                            title={line.partNum}
-                                        />
+                                        <input type="text" value={line.partNum} readOnly className={readOnlyClass} title={line.partNum} />
                                     </td>
 
-                                    {/* 3. Part Desc (Read Only dari Scan) */}
+                                    {/* 3. Part Desc */}
                                     <td className="px-2 py-2">
-                                        <input
-                                            type="text"
-                                            value={line.partDesc}
-                                            readOnly
-                                            className={readOnlyClass}
-                                            title={line.partDesc}
-                                        />
+                                        <input type="text" value={line.partDesc} readOnly className={readOnlyClass} title={line.partDesc} />
                                     </td>
 
-                                    {/* 4. IUM (Auto Fetch) */}
+                                    {/* 4. IUM */}
                                     <td className="px-2 py-2">
-                                        <input
-                                            type="text"
-                                            value={line.uom}
-                                            readOnly
-                                            className={`${readOnlyClass} text-center ${line.uom === 'ERR' ? 'text-red-500 font-bold' : ''}`}
-                                            title={line.uom}
-                                        />
+                                        <input type="text" value={line.uom} readOnly className={`${readOnlyClass} text-center ${line.uom === 'ERR' ? 'text-red-500 font-bold' : ''}`} />
                                     </td>
 
-                                    {/* 5. Warehouse (Dropdown - Editable) */}
+                                    {/* 5. Lot Number */}
+                                    <td className="px-2 py-2">
+                                        <input type="text" value={line.lotNum} readOnly className={readOnlyClass} title={line.lotNum} />
+                                    </td>
+
+                                    {/* 6. Ship To (ReadOnly) */}
+                                    <td className="px-2 py-2">
+                                        <input type="text" value={(line as any).shipTo || ''} readOnly className={readOnlyClass} />
+                                    </td>
+
+                                    {/* 7. Wh To (Dropdown) */}
                                     <td className="px-2 py-2">
                                         <select
                                             value={line.warehouseCode}
                                             onChange={(e) => handleWarehouseChange(line.lineNum, e.target.value)}
                                             className={selectClass}
                                             disabled={isLocked}
-                                            title={line.warehouseCode}
                                         >
                                             <option value="">Pilih Wh</option>
                                             {line.availableWarehouses?.map((wh) => (
-                                                <option key={wh.code} value={wh.code}>
-                                                    {wh.name}
-                                                </option>
+                                                <option key={wh.code} value={wh.code}>{wh.name}</option>
                                             ))}
                                         </select>
-                                        {(!line.availableWarehouses || line.availableWarehouses.length === 0) && (
-                                            <div className="text-[10px] text-red-500 mt-1">
-                                                No Wh Found
-                                            </div>
-                                        )}
                                     </td>
 
-                                    {/* 6. Lot Num (Read Only dari Scan) */}
-                                    <td className="px-2 py-2">
-                                        <input
-                                            type="text"
-                                            value={line.lotNum}
-                                            readOnly
-                                            className={readOnlyClass}
-                                            title={line.lotNum}
-                                        />
-                                    </td>
-
-                                    {/* 7. Bin From (Dropdown - Editable) */}
+                                    {/* 8. Bin To (Dropdown) */}
                                     <td className="px-2 py-2">
                                         <div className="relative w-full">
                                             <input
@@ -185,30 +161,20 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
                                                 className={`${inputClass} pr-6 uppercase`}
                                                 placeholder={line.warehouseCode ? "Ketik/Pilih" : "-"}
                                             />
-
-                                            {/* SELECT TRIGGER: Hanya muncul jika ada opsi Bin */}
                                             {line.availableBins && line.availableBins.length > 0 && (
                                                 <>
-                                                    {/* Visual Icon Panah (Pojok Kanan) */}
                                                     <div className="absolute right-1 top-0 bottom-0 flex items-center px-1 pointer-events-none text-gray-500">
                                                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                                                     </div>
-
                                                     <select
                                                         className="absolute inset-y-0 right-0 w-8 opacity-0 cursor-pointer text-xs"
                                                         value=""
-                                                        onChange={(e) => {
-                                                            if (e.target.value) {
-                                                                updateLineState(line.lineNum, 'binNum', e.target.value);
-                                                            }
-                                                        }}
+                                                        onChange={(e) => e.target.value && updateLineState(line.lineNum, 'binNum', e.target.value)}
                                                         disabled={!line.warehouseCode}
                                                     >
                                                         <option value="" disabled>Pilih Bin</option>
                                                         {line.availableBins.map((bin) => (
-                                                            <option key={bin.code} value={bin.code}>
-                                                                {bin.code}
-                                                            </option>
+                                                            <option key={bin.code} value={bin.code}>{bin.code}</option>
                                                         ))}
                                                     </select>
                                                 </>
@@ -216,42 +182,53 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
                                         </div>
                                     </td>
 
-                                    {/* 8. Qty Ship (Editable Number, default dari scan) */}
+                                    {/* 9. Qty Ship */}
+                                    <td className="px-2 py-2">
+                                        <input type="number" value={line.qty} readOnly className={`${readOnlyClass} text-center`} />
+                                    </td>
+
+                                    {/* 10. Qty Terima */}
                                     <td className="px-2 py-2">
                                         <input
                                             type="number"
-                                            value={line.qty}
+                                            value={(line as any).qtyReceived ?? ''}
                                             disabled={isLocked}
-                                            onChange={(e) => updateLineState(line.lineNum, 'qty', parseFloat(e.target.value) || 0)}
-                                            className={`${readOnlyClass} text-center`}
+                                            onChange={(e) => updateLineState(line.lineNum, 'qtyReceived' as any, parseFloat(e.target.value) || 0)}
+                                            className={`${inputClass} text-center bg-yellow-50`}
                                         />
                                     </td>
-                                    {/* 9. Keterangan (Editable Text) */}
+
+                                    {/* 11. Qty Hitung */}
+                                    <td className="px-2 py-2">
+                                        <input
+                                            type="number"
+                                            value={(line as any).qtyCounted ?? ''}
+                                            disabled={isLocked}
+                                            onChange={(e) => updateLineState(line.lineNum, 'qtyCounted' as any, parseFloat(e.target.value) || 0)}
+                                            className={`${inputClass} text-center`}
+                                        />
+                                    </td>
+
+                                    {/* 12. Ket Receive */}
                                     <td className="px-2 py-2">
                                         <input
                                             type="text"
-                                            value={line.comment}
+                                            value={(line as any).rcvComment || ''}
                                             disabled={isLocked}
-                                            onChange={(e) => updateLineState(line.lineNum, 'comment', e.target.value)}
+                                            onChange={(e) => updateLineState(line.lineNum, 'rcvComment' as any, e.target.value)}
                                             className={inputClass}
-                                            placeholder="..."
+                                            placeholder="Catatan..."
                                         />
                                     </td>
 
-                                    {/* 10. Status */}
-                                    <td className="px-2 py-2 text-center">
-                                        <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-semibold border border-blue-200">
-                                            {line.status}
-                                        </span>
+                                    {/* 13. Ket Shipment */}
+                                    <td className="px-2 py-2">
+                                        <input type="text" value={line.comment} readOnly className={readOnlyClass} title={line.comment} />
                                     </td>
 
-                                    {/* Hapus line */}
+                                    {/* Aksi */}
                                     <td className="px-2 py-2 text-center">
-                                        <button
-                                            onClick={() => onDeleteLine(line)}
-                                            className="text-red-600 hover:text-red-800"
-                                            title="Hapus Line"
-                                        >
+                                        <button onClick={() => onDeleteLine(line)} className="text-red-600 hover:text-red-800" title="Hapus Line">
                                             <TrashIcon className="h-4 w-4" />
                                         </button>
                                     </td>
