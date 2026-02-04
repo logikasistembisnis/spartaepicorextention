@@ -10,12 +10,12 @@ import Link from 'next/link'
 import { getPlantsList, ApiShip } from '@/api/sjplant/ship'
 import { getHeaderById } from '@/api/rcvplant/getbyid'
 import { updateHeaderToUD100 } from '@/api/sjplant/updateheader'
-import { updateLineToUD100A } from '@/api/rcvplant/updateline';
-import { InvShip } from "@/api/sjplant/invship";
-import { RetInvShip } from '@/api/sjplant/retinvship'
-import { pdf } from "@react-pdf/renderer";
-import SuratJalanPDF from "@/components/pdf/SJAntarPlant";
-import { getShipToAddress } from "@/constants/sjAddress";
+import { updateLineToUD100A } from '@/api/rcvplant/updateline'
+import { InvReceive } from "@/api/rcvplant/invreceive"
+import { RetInvReceive } from "@/api/rcvplant/retinvreceive"
+import { pdf } from "@react-pdf/renderer"
+import SuratJalanPDF from "@/components/pdf/SJAntarPlant"
+import { getShipToAddress } from "@/constants/sjAddress"
 
 function RcvPlantContent() {
     const router = useRouter()
@@ -23,9 +23,9 @@ function RcvPlantContent() {
     const packNumParam = searchParams.get('id')
     const [isSaving, setIsSaving] = useState(false)
     const [isLoadingData, setIsLoadingData] = useState(false)
-    const [isPostingShipped, setIsPostingShipped] = useState(false)
-    const [hasPostedShipped, setHasPostedShipped] = useState(false)
-    const [shipTriggeredByUser, setShipTriggeredByUser] = useState(false)
+    const [isPostingReceived, setisPostingReceived] = useState(false)
+    const [hasPostedReceived, setHasPostedReceived] = useState(false)
+    const [rcvTriggeredByUser, setrcvTriggeredByUser] = useState(false)
     const [returnTriggeredByUser, setReturnTriggeredByUser] = useState(false)
     const [plantList, setPlantList] = useState<ApiShip[]>([])
     const [lines, setLines] = useState<SjPlantLine[]>([])
@@ -99,16 +99,16 @@ function RcvPlantContent() {
         field: keyof SjPlantHeader,
         value: string | boolean | number
     ) => {
-        // DETEKSI perubahan checkbox shipped oleh USER
+        // DETEKSI perubahan checkbox received oleh USER
         if (
             field === 'isReceived' &&
             headerData.isReceived === false &&
             value === true
         ) {
-            setShipTriggeredByUser(true);
+            setrcvTriggeredByUser(true);
         }
 
-        // USER UNCHECK SHIP (RETURN)
+        // USER UNCHECK RECEIVED (RETURN)
         if (
             field === 'isReceived' &&
             headerData.isReceived === true &&
@@ -122,44 +122,44 @@ function RcvPlantContent() {
 
     useEffect(() => {
         if (
-            !shipTriggeredByUser ||
-            hasPostedShipped ||
-            isPostingShipped ||
+            !rcvTriggeredByUser ||
+            hasPostedReceived ||
+            isPostingReceived ||
             !headerData.packNum
         ) return;
 
         if (!headerData.shipFrom || !headerData.shipTo) {
             alert("Ship From dan Ship To wajib diisi");
             setHeaderData(prev => ({ ...prev, isReceived: false }));
-            setShipTriggeredByUser(false);
+            setrcvTriggeredByUser(false);
             return;
         }
 
-        const handleShip = async () => {
-            setIsPostingShipped(true);
+        const handleRcv = async () => {
+            setisPostingReceived(true);
             try {
-                const result = await InvShip({
+                const result = await InvReceive({
                     SJPlant: headerData.packNum,
                     ShipFrom: headerData.shipFrom,
                     ShipTo: headerData.shipTo,
-                    Date: `${headerData.shipDate}T00:00:00`,
+                    Date: `${headerData.receiptDate}T00:00:00`,
                 });
 
                 if (!result.success) {
                     alert(result.message);
 
                     setHeaderData(prev => ({ ...prev, isReceived: false }));
-                    setShipTriggeredByUser(false);
+                    setrcvTriggeredByUser(false);
                     return;
                 }
 
                 alert(result.message);
-                setHasPostedShipped(true);
-                setShipTriggeredByUser(false);
+                setHasPostedReceived(true);
+                setrcvTriggeredByUser(false);
 
                 if (rawData) {
                     await updateHeaderToUD100(
-                        { ...headerData, status: "SHIPPED", isReceived: true },
+                        { ...headerData, status: "RECEIVED", isReceived: true },
                         rawData
                     );
                 }
@@ -169,20 +169,20 @@ function RcvPlantContent() {
             } catch (e) {
                 alert(e instanceof Error ? e.message : "Gagal");
                 setHeaderData(prev => ({ ...prev, isReceived: false }));
-                setShipTriggeredByUser(false);
+                setrcvTriggeredByUser(false);
             } finally {
-                setIsPostingShipped(false);
+                setisPostingReceived(false);
             }
         };
 
-        handleShip();
+        handleRcv();
 
-    }, [shipTriggeredByUser]);
+    }, [rcvTriggeredByUser]);
 
     useEffect(() => {
         if (
             !returnTriggeredByUser ||
-            isPostingShipped ||
+            isPostingReceived ||
             !headerData.packNum
         ) return;
 
@@ -193,14 +193,14 @@ function RcvPlantContent() {
             return;
         }
 
-        const handleReturnShip = async () => {
-            setIsPostingShipped(true);
+        const handleReturnRcv = async () => {
+            setisPostingReceived(true);
             try {
-                const result = await RetInvShip({
+                const result = await RetInvReceive({
                     SJPlant: headerData.packNum,
                     ShipFrom: headerData.shipFrom,
                     ShipTo: headerData.shipTo,
-                    Date: `${headerData.shipDate}T00:00:00`,
+                    Date: `${headerData.receiptDate}T00:00:00`,
                 });
 
                 if (!result.success) {
@@ -213,11 +213,11 @@ function RcvPlantContent() {
 
                 alert(result.message);
                 setReturnTriggeredByUser(false);
-                setHasPostedShipped(false);
+                setHasPostedReceived(false);
 
                 if (rawData) {
                     await updateHeaderToUD100(
-                        { ...headerData, status: "OPEN", isReceived: false },
+                        { ...headerData, status: "SHIPPED", isReceived: false },
                         rawData
                     );
                 }
@@ -230,11 +230,11 @@ function RcvPlantContent() {
                 setHeaderData(prev => ({ ...prev, isReceived: true }));
                 setReturnTriggeredByUser(false);
             } finally {
-                setIsPostingShipped(false);
+                setisPostingReceived(false);
             }
         };
 
-        handleReturnShip();
+        handleReturnRcv();
     }, [returnTriggeredByUser]);
 
     // --- LOGIC TOMBOL SIMPAN  ---
@@ -408,7 +408,6 @@ function RcvPlantContent() {
                         setLines={setLines}
                         scanLogs={logs}
                         setScanLogs={setLogs}
-                        shipTo={headerData.shipTo}
                         isLocked={headerData.isReceived ?? false}
                     />
                 ) : (
