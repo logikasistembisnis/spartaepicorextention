@@ -29,7 +29,7 @@ type ActionResponse = {
   data: SJItem[];
 };
 
-export async function getSJList(): Promise<ActionResponse> {
+export async function getSJList(status: string = 'Open'): Promise<ActionResponse> {
   const cookieStore = await cookies();
   const authHeader = cookieStore.get("session_auth")?.value;
 
@@ -39,7 +39,11 @@ export async function getSJList(): Promise<ActionResponse> {
 
   try {
     const baqId = "UDNEL_SJPlantQR";
-    const queryUrl = `/v2/odata/166075/BaqSvc/${baqId}/Data`;
+    const param =
+    status && status !== 'All'
+      ? `?status='${status}'`
+      : '';
+    const queryUrl = `/v2/odata/166075/BaqSvc/${baqId}/Data${param}`;
 
     const response = await apiFetch(queryUrl, {
       method: "GET",

@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { PlusIcon, TruckIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
 import { getSJList, SJItem } from '@/api/sjplant/sjplantlist'
 
@@ -13,12 +13,13 @@ export default function SJAntarPlant() {
     const [searchTerm, setSearchTerm] = useState("")
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState("")
+    const [statusFilter, setStatusFilter] = useState<'All' | 'Open' | 'Shipped' | 'Received'>('Open')
 
     // --- FETCH DATA ON MOUNT ---
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true)
-            const result = await getSJList()
+            const result = await getSJList(statusFilter)
 
             if (result.success && result.data) {
                 setData(result.data)
@@ -29,7 +30,7 @@ export default function SJAntarPlant() {
         }
 
         fetchData()
-    }, [])
+    }, [statusFilter])
 
     // Helper untuk warna badge status
     // Kita tambahkan .toLowerCase() agar case-insensitive (misal "OPEN" vs "Open")
@@ -62,18 +63,40 @@ export default function SJAntarPlant() {
                 </div>
             </div>
 
-            {/* --- SEARCH FILTER --- */}
-            <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                    <MagnifyingGlassIcon className="h-4 w-4 text-gray-400" />
+            <div className="flex flex-col sm:flex-row gap-3">
+                {/* STATUS FILTER */}
+                <div className="relative w-full sm:w-40">
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+                        className="w-full appearance-none rounded-md border border-gray-300 bg-white py-2 pl-3 pr-8 text-sm">
+                        <option value="All">All</option>
+                        <option value="Open">Open</option>
+                        <option value="Shipped">Shipped</option>
+                        <option value="Received">Received</option>
+                    </select>
+
+                    {/* CUSTOM ARROW */}
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                        <ChevronDownIcon
+                            className="h-4 w-4 text-gray-400"
+                            aria-hidden="true"
+                        />
+                    </div>
                 </div>
-                <input
-                    type="text"
-                    placeholder="Search by Pack Number Plant..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="block w-full rounded-md border-0 py-2 pl-9 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset text-sm"
-                />
+                {/* SEARCH */}
+                <div className="relative flex-1">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                        <MagnifyingGlassIcon className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <input
+                        type="text"
+                        placeholder="Search by Pack Number Plant..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="block w-full rounded-md border-0 py-2 pl-9 text-gray-900 ring-1 ring-inset ring-gray-300 text-sm focus:ring-2"
+                    />
+                </div>
             </div>
 
             {/* --- TABLE SECTION --- */}
