@@ -1,18 +1,23 @@
 'use client'
 
-import { Dispatch, SetStateAction } from 'react'
+import { Dispatch, SetStateAction, useState } from 'react'
 import { SjPlantLine } from '@/types/sjPlant'
 import { getPartBinList } from '@/api/sjplant/bin'
 import { TrashIcon } from '@heroicons/react/24/outline'
+import AddManualLineModal from '@/components/modals/sjplant/AddManualLine'
+import { getPartLotList } from '@/api/sjplant/lot'
 
 interface SJLineTableProps {
     lines: SjPlantLine[];
     setLines: Dispatch<SetStateAction<SjPlantLine[]>>;
     onDeleteLine: (line: SjPlantLine) => void;
     isLocked: boolean;
+    shipFrom: string;
 }
 
-export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }: SJLineTableProps) {
+export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked, shipFrom }: SJLineTableProps) {
+    const [showModal, setShowModal] = useState(false)
+    const [loadingLots, setLoadingLots] = useState<number | null>(null); // State loading per line
 
     // Fungsi update data per baris (misal ganti Warehouse / Qty manual)
     const updateLineState = (id: number, field: keyof SjPlantLine, value: string | number) => {
@@ -22,6 +27,47 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
             }
             return line
         }))
+    }
+
+    // --- LOGIC FETCH LOT (LAZY LOAD SAAT KLIK) ---
+    const handleLotFocus = async (line: SjPlantLine) => {
+        // Cuma fetch kalau Manual, belum ada data lot, dan tidak sedang loading
+        if (line.source === 'MANUAL' && (!line.availableLots || line.availableLots.length === 0)) {
+            setLoadingLots(line.lineNum);
+            try {
+                const res = await getPartLotList(line.partNum);
+                if (res.success && res.data) {
+                    const lotOptions = res.data.map(l => ({ lotNum: l.LotNum }));
+
+                    setLines(prev => prev.map(l => {
+                        if (l.lineNum === line.lineNum) {
+                            return { ...l, availableLots: lotOptions };
+                        }
+                        return l;
+                    }));
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoadingLots(null);
+            }
+        }
+    }
+
+    // --- LOGIC GANTI LOT (RESET BIN) ---
+    const handleLotChange = (id: number, newLot: string) => {
+        setLines(prev => prev.map(line => {
+            if (line.lineNum === id) {
+                // Ganti Lot, Kosongkan Bin (karena Bin tergantung Lot)
+                return {
+                    ...line,
+                    lotNum: newLot,
+                    binNum: '',
+                    availableBins: []
+                };
+            }
+            return line;
+        }));
     }
 
     const handleWarehouseChange = async (id: number, newWhseCode: string) => {
@@ -72,8 +118,16 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
 
     return (
         <div className="mt-4 mb-4 border border-gray-200 rounded-lg shadow-sm">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                 <h3 className="text-sm font-bold text-gray-700">Line Data</h3>
+                {!isLocked && (
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                        + Tambah Line
+                    </button>
+                )}
             </div>
             <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -165,13 +219,51 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
 
                                     {/* 6. Lot Num (Read Only dari Scan) */}
                                     <td className="px-2 py-2">
-                                        <input
-                                            type="text"
-                                            value={line.lotNum}
-                                            readOnly
-                                            className={readOnlyClass}
-                                            title={line.lotNum}
-                                        />
+                                        {/* KONDISI 1: QR CODE (READ ONLY) */}
+                                        {line.source === 'QR' ? (
+                                            <input
+                                                readOnly
+                                                value={line.lotNum}
+                                                className={readOnlyClass}
+                                            />
+                                        ) : (
+                                            /* KONDISI 2: MANUAL (DROPDOWN / INPUT) */
+                                            <div className="relative w-full">
+                                                <input
+                                                    type="text"
+                                                    value={line.lotNum}
+                                                    onChange={(e) => handleLotChange(line.lineNum, e.target.value.toUpperCase())}
+                                                    onFocus={() => handleLotFocus(line)} // Fetch saat klik
+                                                    className={`${inputClass} uppercase pr-6`}
+                                                    placeholder={loadingLots === line.lineNum ? "Loading..." : "Ketik/Pilih"}
+                                                    disabled={isLocked}
+                                                />
+
+                                                {/* Dropdown Trigger Arrow */}
+                                                {(line.availableLots && line.availableLots.length > 0) && (
+                                                    <>
+                                                        <div className="absolute right-1 top-0 bottom-0 flex items-center px-1 pointer-events-none text-gray-500">
+                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                                        </div>
+                                                        <select
+                                                            className="absolute inset-y-0 right-0 w-full opacity-0 cursor-pointer text-xs"
+                                                            value=""
+                                                            onChange={(e) => {
+                                                                if (e.target.value) handleLotChange(line.lineNum, e.target.value)
+                                                            }}
+                                                            disabled={isLocked}
+                                                        >
+                                                            <option value="" disabled>Pilih Lot</option>
+                                                            {line.availableLots.map((lot) => (
+                                                                <option key={lot.lotNum} value={lot.lotNum}>
+                                                                    {lot.lotNum}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
                                     </td>
 
                                     {/* 7. Bin From (Dropdown - Editable) */}
@@ -261,6 +353,13 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked }:
                     </tbody>
                 </table>
             </div>
+            <AddManualLineModal
+                open={showModal}
+                onClose={() => setShowModal(false)}
+                nextLineNum={lines.length > 0 ? Math.max(...lines.map(l => l.lineNum)) + 1 : 1}
+                onAdd={(line) => setLines(prev => [line, ...prev])}
+                shipFrom={shipFrom}
+            />
         </div>
     )
 }

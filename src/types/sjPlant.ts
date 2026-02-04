@@ -38,6 +38,8 @@ export type SjPlantLine = {
   availableBins?: BinOption[];
   rawData?: UD100ARawData;
   pendingLogs?: SjScanLog[];
+  availableLots?: LotOption[];
+  source?: 'QR' | 'MANUAL'
 }
 
 export interface SjScanLog {
@@ -64,6 +66,10 @@ export interface BinOption {
   code: string; // BinNum
   desc: string; // BinDesc
   qty: number;  // QtyOnHand
+}
+
+export interface LotOption {
+  lotNum: string;
 }
 
 export interface UD100RawData {

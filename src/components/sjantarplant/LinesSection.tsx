@@ -170,6 +170,7 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, s
       comment: '',
       status: '',
       pendingLogs: [scanLog],
+      source: 'QR'
     }
 
     setLines(prev => [newLine, ...prev])
@@ -225,7 +226,7 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, s
 
       <ScanInput onScan={handleProcessScan} disabled={isLocked} />
 
-      <SJLineTable lines={lines} setLines={setLines} onDeleteLine={handleDeleteLine} isLocked={isLocked}/>
+      <SJLineTable lines={lines} setLines={setLines} onDeleteLine={handleDeleteLine} isLocked={isLocked} shipFrom={shipFrom}/>
 
       <ScanResultTable items={scanLogs} />
     </div>

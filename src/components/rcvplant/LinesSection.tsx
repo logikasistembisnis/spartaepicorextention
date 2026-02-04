@@ -10,11 +10,10 @@ interface LinesSectionProps {
   setLines: Dispatch<SetStateAction<SjPlantLine[]>>;
   scanLogs: SjScanLog[];
   setScanLogs: React.Dispatch<React.SetStateAction<SjScanLog[]>>;
-  shipTo: string;
   isLocked: boolean;
 }
 
-export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, shipTo, isLocked }: LinesSectionProps) {
+export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, isLocked }: LinesSectionProps) {
   return (
     <div className="bg-white rounded-lg shadow-sm mt-2 p-6 border border-gray-200">
       <h3 className="font-bold text-lg text-gray-700 mb-4">Lines Detail</h3>
