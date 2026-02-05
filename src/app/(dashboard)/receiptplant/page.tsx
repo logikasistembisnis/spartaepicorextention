@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { MagnifyingGlassIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, ChevronDownIcon, QrCodeIcon } from '@heroicons/react/24/outline'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useDebounce } from 'use-debounce'
 import { getSJList, SJItem } from '@/api/sjplant/sjplantlist';
@@ -25,6 +25,7 @@ export default function RcvAntarPlant() {
     const [error, setError] = useState("")
 
     const observer = useRef<IntersectionObserver | null>(null)
+    const [qrValue, setQrValue] = useState("")
 
     // Reset saat Search / Filter berubah
     useEffect(() => {
@@ -32,6 +33,26 @@ export default function RcvAntarPlant() {
         setSkip(0);
         setHasMore(true);
     }, [searchTerm, statusFilter]);
+
+    const handleQrScan = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+
+            if (!qrValue) return;
+
+            // Logika split string
+            const parts = qrValue.split('#');
+            const packNumber = parts[0]; // Ambil elemen pertama
+
+            if (packNumber) {
+                router.push(`/receiptplant/entry?id=${packNumber}`);
+                setQrValue("");
+            } else {
+                // Error handling sederhana jika format salah
+                alert("Format QR tidak valid. Pastikan format PackNumber#ShipDate");
+            }
+        }
+    }
 
     // Fetch Data
     const fetchData = useCallback(async (currentSkip: number, currentSearch: string, currentStatusFilter: string) => {
@@ -107,15 +128,15 @@ export default function RcvAntarPlant() {
         <div className="space-y-4">
             <h2 className="text-xl font-bold text-gray-800 tracking-tight">Receipt Antar Plant</h2>
 
-            {/* FILTER & SEARCH BAR */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            {/* FILTER, SEARCH BAR, QR SJ */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
 
                 {/* STATUS FILTER */}
-                <div className="relative w-full sm:w-44">
+                <div className="relative w-full sm:w-44 flex-shrink-0">
                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="w-full appearance-none rounded-md border border-gray-300 bg-white py-2 pl-3 pr-8 text-sm"
+                        className="w-full appearance-none rounded-md border-0 ring-1 ring-inset ring-gray-300 bg-white py-2.5 pl-3 pr-8 text-sm focus:ring-2 focus:ring-inset focus:ring-blue-600"
                     >
                         <option value="All">All</option>
                         <option value="Shipped">Shipped</option>
@@ -136,9 +157,26 @@ export default function RcvAntarPlant() {
                         placeholder="Search Pack Number..."
                         value={textInput}
                         onChange={(e) => setTextInput(e.target.value)}
-                        className="block w-full bg-white rounded-md border-0 py-2 pl-9 ring-1 ring-inset ring-gray-300 text-sm"
+                        className="block w-full bg-white rounded-md border-0 py-2.5 pl-10 ring-1 ring-inset ring-gray-300 text-sm focus:ring-2 focus:ring-inset focus:ring-blue-600 placeholder:text-gray-400"
                     />
                 </div>
+
+                {/* QR SJ ANTAR PLANT */}
+                <div className="relative flex-1">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <QrCodeIcon className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <input
+                        type="text"
+                        placeholder="Scan QR SJ Antar Plant..."
+                        value={qrValue}
+                        onChange={(e) => setQrValue(e.target.value)}
+                        onKeyDown={handleQrScan}
+                        className="block w-full bg-white rounded-md border-0 py-2.5 pl-10 ring-1 ring-inset ring-gray-300 text-sm focus:ring-2 focus:ring-inset focus:ring-blue-600 placeholder:text-gray-400"
+                        autoComplete="off"
+                    />
+                </div>
+
             </div>
 
             {/* TABLE */}
