@@ -17,8 +17,9 @@ import { checkGuidExists } from "@/api/sjplant/checkguid";
 import { InvShip } from "@/api/sjplant/invship";
 import { RetInvShip } from '@/api/sjplant/retinvship'
 import { pdf } from "@react-pdf/renderer";
-import SuratJalanPDF from "@/components/pdf/SJAntarPlant";
+import SuratJalanPDF from "@/components/pdf/sjplant/SJAntarPlant";
 import { getShipToAddress } from "@/constants/sjAddress";
+import QRCode from "qrcode";
 
 function EntryContent() {
     const router = useRouter()
@@ -33,6 +34,15 @@ function EntryContent() {
     const [plantList, setPlantList] = useState<ApiShip[]>([])
     const [lines, setLines] = useState<SjPlantLine[]>([])
     const [logs, setLogs] = useState<SjScanLog[]>([])
+
+    const formatYYMMDD = (dateStr?: string) => {
+        if (!dateStr) return "";
+        const d = new Date(dateStr);
+        const yy = d.getFullYear().toString().slice(-2);
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        return `${yy}${mm}${dd}`;
+    };
 
     // State Header
     const [headerData, setHeaderData] = useState<SjPlantHeader>({
@@ -414,11 +424,18 @@ function EntryContent() {
         try {
             const address = getShipToAddress(headerData.shipTo);
 
+            const qrValue = `${headerData.packNum}#${formatYYMMDD(headerData.shipDate)}`;
+            const qrBase64 = await QRCode.toDataURL(qrValue, {
+                width: 120,
+                margin: 1,
+            });
+
             const blob = await pdf(
                 <SuratJalanPDF
                     header={headerData}
                     lines={lines}
                     address={address}
+                    qrBase64={qrBase64}
                 />
             ).toBlob();
 

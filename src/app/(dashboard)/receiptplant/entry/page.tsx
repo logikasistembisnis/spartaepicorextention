@@ -14,7 +14,7 @@ import { updateLineToUD100A } from '@/api/rcvplant/updateline'
 import { InvReceive } from "@/api/rcvplant/invreceive"
 import { RetInvReceive } from "@/api/rcvplant/retinvreceive"
 import { pdf } from "@react-pdf/renderer"
-import SuratJalanPDF from "@/components/pdf/SJAntarPlant"
+import PenerimaanPDF from "@/components/pdf/rcvplant/RCVAntarPlant"
 import { getShipToAddress } from "@/constants/sjAddress"
 
 function RcvPlantContent() {
@@ -309,9 +309,9 @@ function RcvPlantContent() {
         }
     };
 
-    const handlePrintSuratJalan = async () => {
+    const handlePrintPenerimaan = async () => {
         if (!headerData.packNum) {
-            alert("Simpan data dulu sebelum cetak Surat Jalan");
+            alert("Simpan data dulu sebelum cetak Penerimaan Barang");
             return;
         }
 
@@ -324,7 +324,7 @@ function RcvPlantContent() {
             const address = getShipToAddress(headerData.shipTo);
 
             const blob = await pdf(
-                <SuratJalanPDF
+                <PenerimaanPDF
                     header={headerData}
                     lines={lines}
                     address={address}
@@ -335,8 +335,8 @@ function RcvPlantContent() {
             window.open(url, "_blank");
 
         } catch (error) {
-            console.error("Print Surat Jalan Error:", error);
-            alert("Gagal membuat PDF Surat Jalan");
+            console.error("Print Penerimaan Barang Error:", error);
+            alert("Gagal membuat PDF Penerimaan Barang");
         }
     }
 
@@ -381,7 +381,7 @@ function RcvPlantContent() {
                         {isSaving ? 'Saving...' : 'Simpan'}
                     </button>
                     <button
-                        onClick={handlePrintSuratJalan}
+                        onClick={handlePrintPenerimaan}
                         disabled={!headerData.packNum}
                         className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg disabled:opacity-50"
                     >

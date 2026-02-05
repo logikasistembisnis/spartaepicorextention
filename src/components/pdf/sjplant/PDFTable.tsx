@@ -1,5 +1,4 @@
 import { View, Text, StyleSheet, Image } from "@react-pdf/renderer";
-import QRCode from "qrcode";
 import { SjPlantLine, SjPlantHeader } from "@/types/sjPlant";
 import React from "react";
 
@@ -7,19 +6,13 @@ export default function PdfTable({
     lines,
     note,
     header,
+    qrBase64
 }: {
     lines: SjPlantLine[];
     note?: string;
     header: SjPlantHeader;
+    qrBase64?: string
 }) {
-    const formatYYMMDD = (dateStr?: string) => {
-        if (!dateStr) return "";
-        const d = new Date(dateStr);
-        const yy = d.getFullYear().toString().slice(-2);
-        const mm = String(d.getMonth() + 1).padStart(2, "0");
-        const dd = String(d.getDate()).padStart(2, "0");
-        return `${yy}${mm}${dd}`;
-    };
 
     const formatQty = (value: number | string) => {
         const num = Number(value || 0);
@@ -44,17 +37,6 @@ export default function PdfTable({
         (sum, l) => sum + Number(l.qty || 0),
         0
     );
-
-    const qrValue = `${header.packNum}#${formatYYMMDD(header.shipDate)}`;
-
-    const [qrBase64, setQrBase64] = React.useState<string>("");
-
-    React.useEffect(() => {
-        QRCode.toDataURL(qrValue, {
-            width: 120,
-            margin: 1,
-        }).then(setQrBase64);
-    }, [qrValue]);
 
     return (
         <View style={styles.table} wrap>
