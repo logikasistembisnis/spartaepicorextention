@@ -136,7 +136,7 @@ export default function RcvAntarPlant() {
                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="w-full appearance-none rounded-md border-0 ring-1 ring-inset ring-gray-300 bg-white py-2.5 pl-3 pr-8 text-sm focus:ring-2 focus:ring-inset focus:ring-blue-600"
+                        className="w-full appearance-none rounded-md border-0 ring-1 ring-inset ring-gray-300 bg-white py-2.5 pl-3 pr-8 text-sm"
                     >
                         <option value="All">All</option>
                         <option value="Shipped">Shipped</option>
