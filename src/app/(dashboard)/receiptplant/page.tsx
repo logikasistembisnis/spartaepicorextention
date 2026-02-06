@@ -132,7 +132,7 @@ export default function RcvAntarPlant() {
             <div className="flex flex-col sm:flex-row gap-3 mb-4">
 
                 {/* STATUS FILTER */}
-                <div className="relative w-full sm:w-44 flex-shrink-0">
+                <div className="relative w-full sm:w-44 shrink-0">
                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}

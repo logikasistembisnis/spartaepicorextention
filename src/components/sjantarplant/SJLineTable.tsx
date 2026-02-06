@@ -133,18 +133,18 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked, s
                 <table className="min-w-max divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
-                            <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-[50px]">Line</th>
-                            <th className="px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase w-[150px]">Part Number</th>
-                            <th className="px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase w-[200px]">Part Desc</th>
-                            <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-[60px]">IUM</th>
-                            <th className="px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase w-[150px]">Wh From</th>
-                            <th className="px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase w-[150px]">Lot Num</th>
-                            <th className="px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase w-[100px]">Bin From</th>
-                            <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-[90px]">Qty Pcs</th>
-                            <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-[90px]">Qty Pack</th>
-                            <th className="px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase w-[200px]">Keterangan</th>
-                            <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-[100px]">Status</th>
-                            <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-[60px] sticky right-0 bg-gray-50 z-10">Aksi</th>
+                            <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-12.5">Line</th>
+                            <th className="px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase w-37.5">Part Number</th>
+                            <th className="px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase w-50">Part Desc</th>
+                            <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-15">IUM</th>
+                            <th className="px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase w-37.5">Wh From</th>
+                            <th className="px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase w-35">Lot Num</th>
+                            <th className="px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase w-24.5">Bin From</th>
+                            <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-22.5">Qty Pcs</th>
+                            <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-22.5">Qty Pack</th>
+                            <th className="px-2 py-3 text-left text-xs font-bold text-gray-600 uppercase w-50">Keterangan</th>
+                            <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-25">Status</th>
+                            <th className="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase w-15 sticky right-0 bg-gray-50 z-10">Aksi</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
