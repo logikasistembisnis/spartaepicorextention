@@ -8,7 +8,7 @@ export default function ScanResultTable({ items }: ScanResultTableProps) {
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                <h3 className="text-sm font-bold text-gray-700">Hasil Parsing Scan QR Code</h3>
+                <h3 className="text-sm font-bold text-gray-700">QR Code</h3>
             </div>
 
             <div className="overflow-x-auto">

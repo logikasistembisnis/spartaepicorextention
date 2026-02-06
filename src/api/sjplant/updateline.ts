@@ -21,6 +21,7 @@ export async function updateLineToUD100A(
             ShortChar03: lineData.warehouseCode, // Update Warehouse
             ShortChar05: lineData.binNum, // Update Bin
             ShortChar06: lineData.comment, // Update Comment
+            ShortChar04: lineData.lotNum,
             Number01: validQty, // Update Total Qty
             RowMod: "U", // 'U' = Update existing record
         });

@@ -252,6 +252,7 @@ export default function SJLineTable({ lines, setLines, isLocked }: SJLineTablePr
                                             type="number"
                                             value={line.qtyHitung ?? ''}
                                             disabled={isLocked}
+                                            onFocus={(e) => e.target.select()}
                                             onChange={(e) => updateLineState(line.lineNum, 'qtyHitung', parseFloat(e.target.value) || 0)}
                                             className={`${inputClass} text-center`}
                                         />

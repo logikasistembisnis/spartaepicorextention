@@ -308,16 +308,18 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked, s
                                         </div>
                                     </td>
 
-                                    {/* 8. Qty Ship (Editable Number, default dari scan) */}
+                                    {/* Qty Ship */}
                                     <td className="px-2 py-2">
                                         <input
                                             type="number"
                                             value={line.qty}
                                             disabled={isLocked}
+                                            onFocus={(e) => e.target.select()}
                                             onChange={(e) => updateLineState(line.lineNum, 'qty', parseFloat(e.target.value) || 0)}
                                             className={`${readOnlyClass} text-center`}
                                         />
                                     </td>
+
                                     {/* 9. Keterangan (Editable Text) */}
                                     <td className="px-2 py-2">
                                         <input
