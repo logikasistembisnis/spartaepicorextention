@@ -65,7 +65,7 @@ export async function addLinesToUD100(
         ShortChar09: parentKeys.ShipTo,
         ShortChar10: parentKeys.ShipFrom,
 
-        CheckBox20: true, // Flag aktif/valid
+        CheckBox20: line.source === 'QR',
         RowMod: "A",      // Add Baru
       });
     });
