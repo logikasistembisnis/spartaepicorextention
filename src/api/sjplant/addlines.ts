@@ -32,6 +32,7 @@ export async function addLinesToUD100(
     // 1. MAPPING TYPE 1: SJ LINE TABLE (Data Agregat/Baris Surat Jalan)
     lines.forEach((line) => {
       const validQty = Number(line.qty) || 0;
+      const PackQty = Number(line.qtyPack) || 0;
       const lineNumStr = line.lineNum.toString();
 
       ud100aList.push({
@@ -53,6 +54,7 @@ export async function addLinesToUD100(
         // Data Fields
         Character01: line.partDesc,  // Part Desc
         Number01: validQty,          // Total Qty Baris Ini
+        Number03: PackQty,
 
         ShortChar01: line.partNum,   // Part Num
         ShortChar02: line.uom,       // IUM

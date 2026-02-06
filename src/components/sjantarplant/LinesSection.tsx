@@ -162,6 +162,7 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, s
       partDesc,
       lotNum,
       qty,
+      qtyPack: 0,
       uom,
       warehouseCode: defaultWh,
       binNum: defaultBin,

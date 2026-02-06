@@ -121,6 +121,7 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
         lotNum: line.ShortChar04 || "",
         binNum: line.ShortChar05 || "",
         qty: Number(line.Number01) || 0,
+        qtyPack: Number(line.Number03) || 0,
         comment: line.ShortChar06 || "",
         status: line.ShortChar07 ||"UNSHIP",
         rcvComment: line.Character02 || "",

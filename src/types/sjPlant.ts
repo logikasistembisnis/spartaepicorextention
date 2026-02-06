@@ -34,6 +34,7 @@ export type SjPlantLine = {
   whTo?: string;
   shipTo?: string;
   qtyHitung?: number;
+  qtyPack?: number;
   availableWarehouses?: WarehouseOption[];   
   availableBins?: BinOption[];
   rawData?: UD100ARawData;
@@ -132,6 +133,7 @@ export interface UD100ARawData {
   CheckBox20?: boolean;
   Number01?: number;
   Number02?: number;
+  Number03?: number;
   SysRowID?: string;
   RowMod: string;
 }

@@ -15,6 +15,7 @@ export async function updateLineToUD100A(
 
     try {
         const validQty = Number(lineData.qty) || 0;
+        const PackQty = Number(lineData.qtyPack) || 0;
         const ud100aList: UD100ARawData[] = [];
         ud100aList.push({
             ...rawData, // Copy semua Key & data lama
@@ -23,6 +24,7 @@ export async function updateLineToUD100A(
             ShortChar06: lineData.comment, // Update Comment
             ShortChar04: lineData.lotNum,
             Number01: validQty, // Update Total Qty
+            Number03: PackQty, // Update qty pack
             RowMod: "U", // 'U' = Update existing record
         });
 
