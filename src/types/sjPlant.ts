@@ -33,7 +33,8 @@ export type SjPlantLine = {
   binTo?: string;
   whTo?: string;
   shipTo?: string;
-  qtyHitung?: number;
+  qtyHitungPcs?: number;
+  qtyHitungPack?: number;
   qtyPack?: number;
   availableWarehouses?: WarehouseOption[];   
   availableBins?: BinOption[];
@@ -134,6 +135,7 @@ export interface UD100ARawData {
   Number01?: number;
   Number02?: number;
   Number03?: number;
+  Number04?: number;
   SysRowID?: string;
   RowMod: string;
 }

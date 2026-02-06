@@ -136,10 +136,11 @@ export default function SJLineTable({ lines, setLines, isLocked }: SJLineTablePr
                             <th className={`${thClass} w-30 min-w-30`}>Lot Number</th>
                             <th className={`${thClass} w-30 min-w-30`}>Ship To</th>
                             <th className={`${thClass} w-35 min-w-35`}>WH To</th>
-                            <th className={`${thClass} w-35 min-w-35`}>Bin To</th>
-                            <th className={`${thClass} text-center w-22.5 min-w-22.5`}>Qty Ship</th>
+                            <th className={`${thClass} w-20 min-w-20`}>Bin To</th>
+                            <th className={`${thClass} text-center w-22.5 min-w-22.5`}>Qty Pcs</th>
                             <th className={`${thClass} text-center w-22.5 min-w-22.5`}>Qty Terima</th>
-                            <th className={`${thClass} text-center w-22.5 min-w-22.5`}>Qty Hitung</th>
+                            <th className={`${thClass} text-center w-28 min-w-28`}>Qty Htg Pack</th>
+                            <th className={`${thClass} text-center w-25 min-w-25`}>Qty Htg Pcs</th>
                             <th className={`${thClass} w-50 min-w-50`}>Keterangan Receive</th>
                             <th className={`${thClass} w-50 min-w-50`}>Keterangan Shipment</th>
                         </tr>
@@ -246,14 +247,26 @@ export default function SJLineTable({ lines, setLines, isLocked }: SJLineTablePr
                                         />
                                     </td>
 
-                                    {/* 11. Qty Hitung */}
+                                    {/* Qty Hitung Pack*/}
                                     <td className="px-2 py-2">
                                         <input
                                             type="number"
-                                            value={line.qtyHitung ?? ''}
+                                            value={line.qtyPack ?? ''}
                                             disabled={isLocked}
                                             onFocus={(e) => e.target.select()}
-                                            onChange={(e) => updateLineState(line.lineNum, 'qtyHitung', parseFloat(e.target.value) || 0)}
+                                            onChange={(e) => updateLineState(line.lineNum, 'qtyPack', parseFloat(e.target.value) || 0)}
+                                            className={`${inputClass} text-center`}
+                                        />
+                                    </td>
+
+                                    {/* Qty Hitung Pcs*/}
+                                    <td className="px-2 py-2">
+                                        <input
+                                            type="number"
+                                            value={line.qtyHitungPcs ?? ''}
+                                            disabled={isLocked}
+                                            onFocus={(e) => e.target.select()}
+                                            onChange={(e) => updateLineState(line.lineNum, 'qtyHitungPcs', parseFloat(e.target.value) || 0)}
                                             className={`${inputClass} text-center`}
                                         />
                                     </td>

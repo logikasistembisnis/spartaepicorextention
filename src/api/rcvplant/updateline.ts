@@ -14,7 +14,8 @@ export async function updateLineToUD100A(
     if (!authHeader) return { success: false, message: "Unauthorized" };
 
     try {
-        const validQty = Number(lineData.qtyHitung) || 0;
+        const validQty = Number(lineData.qtyHitungPcs) || 0;
+        const packQty = Number(lineData.qtyPack) || 0;
         const ud100aList: UD100ARawData[] = [];
         ud100aList.push({
             ...rawData, // Copy semua Key & data lama
@@ -22,6 +23,7 @@ export async function updateLineToUD100A(
             Character02: lineData.rcvComment, // Update Bin
             ShortChar08: lineData.whTo, // Update Comment
             Number02: validQty, // Update Total Qty
+            Number03: packQty,
             RowMod: "U", // 'U' = Update existing record
         });
 
