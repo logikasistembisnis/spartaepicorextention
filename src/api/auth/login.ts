@@ -12,39 +12,44 @@ export async function loginAction(
   prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const username = formData.get("username") as string;
-  const password = formData.get("password") as string;
+  const username = (formData.get("username") as string)?.trim();
+  const password = (formData.get("password") as string)?.trim();
 
-  // Validasi sederhana
   if (!username || !password) {
     return { error: "Username dan password wajib diisi." };
   }
 
   try {
-    // Basic Auth token (base64 encoded username:password)
     const basicAuth = Buffer.from(`${username}:${password}`).toString("base64");
     const authHeader = `Basic ${basicAuth}`;
 
-    const response = await apiFetch(`/v1/Ice.BO.UserFileSvc/ValidatePassword`, {
+    const response = await apiFetch(`/v2/Ice.BO.UserFileSvc/ValidatePassword`, {
       method: "POST",
       authHeader,
       requireLicense: true,
+      apiMode: "epicor",
       body: JSON.stringify({
         userID: username,
         password: password,
       }),
     });
 
-    // Cek apakah returnObj true
     const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Epicor Login Error:", data);
+      const errorMsg = data.ErrorMessage || "Username atau password salah.";
+      return { error: errorMsg };
+    }
+
     if (data.returnObj === true) {
       const cookieStore = await cookies();
 
       cookieStore.set("session_auth", authHeader, {
-        httpOnly: true, // JS browser gak bisa baca (aman dari XSS)
-        secure: false,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        maxAge: 60 * 60 * 24, // Expire 1 hari
+        maxAge: 60 * 60 * 24,
         path: "/",
       });
 
@@ -53,7 +58,7 @@ export async function loginAction(
       return { error: "Validasi password gagal." };
     }
   } catch (err) {
-    console.error("Login error:", err);
-    return { error: "Terjadi kesalahan." };
+    console.error("Login System Error:", err);
+    return { error: "Terjadi kesalahan sistem." };
   }
 }
