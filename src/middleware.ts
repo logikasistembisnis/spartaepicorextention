@@ -2,34 +2,23 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-
-  // 🔥 WAJIB SKIP: Next internals & React Server Component
-  const isRSC = request.headers.get('accept')?.includes('text/x-component')
-
-  if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api') ||
-    isRSC
-  ) {
-    return NextResponse.next()
-  }
-
+  // Cek apakah cookie session_auth ada
   const authSession = request.cookies.get('session_auth')
 
-  // belum login → lempar ke login
-  if (!authSession && pathname !== '/login') {
+  // Jika tidak ada cookie, dan user mencoba akses halaman selain login
+  if (!authSession && request.nextUrl.pathname !== '/login') {
     return NextResponse.redirect(new URL('/login', request.url))
   }
-
-  // sudah login → jangan boleh ke login
-  if (authSession && pathname === '/login') {
-    return NextResponse.redirect(new URL('/', request.url))
+  
+  // Jika sudah login tapi buka halaman login, lempar ke dashboard
+  if (authSession && request.nextUrl.pathname === '/login') {
+      return NextResponse.redirect(new URL('/', request.url))
   }
 
   return NextResponse.next()
 }
 
+// Tentukan halaman mana saja yang kena middleware ini
 export const config = {
-  matcher: ['/((?!favicon.ico).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 }
