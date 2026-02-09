@@ -1,4 +1,10 @@
-import { HomeIcon, QrCodeIcon, TruckIcon, ClipboardDocumentCheckIcon } from "@heroicons/react/24/outline";
+import { 
+  HomeIcon, 
+  QrCodeIcon, 
+  TruckIcon, 
+  ClipboardDocumentCheckIcon, 
+  ArchiveBoxIcon 
+} from "@heroicons/react/24/outline";
 
 export type MenuItem = {
   name: string;
@@ -30,6 +36,12 @@ export const MENU_ITEMS: MenuItem[] = [
     href: "/receiptplant",
     icon: ClipboardDocumentCheckIcon,
     match: (path) => path.startsWith("/receiptplant"),
+  },
+  {
+    name: "Stock Finish Good",
+    href: "/stockfg",
+    icon: ArchiveBoxIcon,
+    match: (path) => path.startsWith("/stockfg"),
   },
 ];
 
