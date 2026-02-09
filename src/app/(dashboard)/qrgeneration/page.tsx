@@ -137,8 +137,8 @@ export default function QrGeneration() {
     // Select All
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.checked) {
-            const allIds = new Set(items.map(i => i.id));
-            setSelectedIds(allIds);
+            const visibleIds = new Set(filteredItems.map(i => i.id));
+            setSelectedIds(visibleIds);
         } else {
             setSelectedIds(new Set());
         }
@@ -156,7 +156,7 @@ export default function QrGeneration() {
     }
 
     // Cek status checkbox header (Indeterminate logic bisa ditambahkan jika perlu, ini simple version)
-    const isAllSelected = items.length > 0 && selectedIds.size === items.length;
+    const isAllSelected = filteredItems.length > 0 && filteredItems.every(item => selectedIds.has(item.id));
 
     // --- LOGIC PRINT ---
     const handlePrint = async () => {
