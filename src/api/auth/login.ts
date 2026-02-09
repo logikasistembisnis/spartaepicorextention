@@ -47,7 +47,7 @@ export async function loginAction(
 
       cookieStore.set("session_auth", authHeader, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: false,
         sameSite: "lax",
         maxAge: 60 * 60 * 24,
         path: "/",
