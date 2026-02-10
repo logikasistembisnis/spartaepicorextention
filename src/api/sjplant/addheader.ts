@@ -85,6 +85,7 @@ export async function saveHeaderToUD100(header: SjPlantHeader) {
     const maxAttempts = 5;
     let success = false;
     let finalResult = null;
+    let lastErrorMessage = "";
 
     while (!success && attempts < maxAttempts) {
       attempts++;
@@ -122,6 +123,7 @@ export async function saveHeaderToUD100(header: SjPlantHeader) {
         method: "POST",
         authHeader,
         requireLicense: true,
+        apiMode: "epicor",
         body: JSON.stringify({ ds: { UD100: [payload] } }),
       });
 
@@ -140,31 +142,49 @@ export async function saveHeaderToUD100(header: SjPlantHeader) {
         success = true;
       } else {
         const status = response.status;
-        const txt = await response.text();
+        let errorMessage = `Epicor Error ${status}`;
 
+        // Parsing Error Message
+        try {
+          const errorJson = await response.json();
+          // Prioritas: ErrorMessage > Message > Stringify
+          if (errorJson.ErrorMessage) errorMessage = errorJson.ErrorMessage;
+          else if (errorJson.Message) errorMessage = errorJson.Message;
+          else errorMessage = JSON.stringify(errorJson);
+        } catch (e) {
+          errorMessage = await response.text();
+        }
+
+        lastErrorMessage = errorMessage;
+
+        // Cek DUPLICATE (409)
         if (
           status === 409 ||
-          txt.includes("Duplicate") ||
-          txt.includes("already exists")
+          errorMessage.toLowerCase().includes("duplicate") ||
+          errorMessage.toLowerCase().includes("already exists") ||
+          errorMessage.toLowerCase().includes("key1")
         ) {
           console.warn(`>> Gagal (Duplicate) Key ${tryKey1}. Retrying...`);
-          continue;
+          continue; // LANJUT LOOP
         } else {
-          throw new Error(`Epicor Error ${status}: ${txt}`);
+          // Error lain (misal 401 Unauthorized, 500 Server Error)
+          // LANGSUNG BERHENTI & LEMPAR ERROR
+          throw new Error(errorMessage);
         }
       }
     }
 
     if (!success) {
-      throw new Error(`Gagal menyimpan setelah ${maxAttempts}x percobaan.`);
+      throw new Error(`Gagal menyimpan setelah ${maxAttempts}x percobaan. Error: ${lastErrorMessage}`);
     }
 
     return { success: true, data: finalResult };
   } catch (error) {
     console.error(">> FATAL ERROR:", error);
+    const msg = error instanceof Error ? error.message : "Server Error";
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Server Error",
+      message: msg,
     };
   }
 }
