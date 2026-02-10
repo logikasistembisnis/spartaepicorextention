@@ -15,18 +15,20 @@ type Props = {
 export default function SuratJalanPDF({ header, lines, address, qrBase64 }: Props) {
     return (
         <Document>
-            <Page size="LETTER" style={styles.page}>
-                <View style={styles.contentWrapper}>
-                    <PdfHeader header={header} address={address} />
-                    <PdfTable lines={lines} note={header.comment} header={header} qrBase64={qrBase64}/>
-                    <View style={{ flex: 1 }} />
-                    <PdfSign header={header} />
-                </View>
-                <View style={styles.footerContainer} fixed>
-                    <PdfCompanyFooter />
-                </View>
-
-            </Page>
+            {Array(5).fill(null).map((_, index) => (
+                <Page key={index} size="LETTER" style={styles.page}>
+                    <View style={styles.contentWrapper}>
+                        <PdfHeader header={header} address={address} />
+                        <PdfTable lines={lines} note={header.comment} header={header} qrBase64={qrBase64} />
+                        <View style={{ flex: 1 }} />
+                        <PdfSign header={header} />
+                    </View>
+                    
+                    <View style={styles.footerContainer} fixed>
+                        <PdfCompanyFooter />
+                    </View>
+                </Page>
+            ))}
         </Document>
     );
 }
