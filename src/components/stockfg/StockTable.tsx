@@ -94,37 +94,37 @@ export default function StockTable({ warehouse, period }: Props) {
                             {data.length > 0 ? (
                                 data.map((item, idx) => (
                                     <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-600">
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-600">
                                             {item.Calculated_PartNum}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
                                             {item.Part_PartDescription}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600">
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-right text-gray-600">
                                             {formatNumber(item.Calculated_SaldoAwal)}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600">
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-right text-gray-600">
                                             {item.Calculated_MutasiIn !== 0 
                                                 ? `+${formatNumber(item.Calculated_MutasiIn)}` 
                                                 : formatNumber(0) 
                                             }
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600">
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-right text-gray-600">
                                             {item.Calculated_MutasiOut !== 0 
                                                 ? `-${formatNumber(item.Calculated_MutasiOut)}` 
                                                 : formatNumber(0)
                                             }
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600">
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-right text-gray-600">
                                             {formatNumber(item.Calculated_SaldoAkhir)}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-600">
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-center text-gray-600">
                                             {item.Part_IUM}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-600">
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-center text-gray-600">
                                             {item.Part_ClassID}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
                                             {item.PartClass_Description}
                                         </td>
                                     </tr>
