@@ -12,6 +12,8 @@ type EditQtyProps = {
     setNewQtyAction: (val: number) => void
     currentQtyCetak: number
     setNewQtyCetakAction: (val: number) => void
+    qtyPack: number
+    totalBox: number
     isSaving: boolean
     isPrinted: boolean
 }
@@ -25,6 +27,8 @@ export default function EditQty({
     setNewQtyAction,
     currentQtyCetak,
     setNewQtyCetakAction,
+    qtyPack,
+    totalBox,
     isSaving,
     isPrinted
 }: EditQtyProps) {
@@ -51,6 +55,8 @@ export default function EditQty({
 
                 {/* Body */}
                 <div className="p-6 space-y-4">
+
+                    {/* Part Number */}
                     <div>
                         <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
                             Part Number
@@ -63,42 +69,72 @@ export default function EditQty({
                         />
                     </div>
 
-                    <div>
-                        <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
-                            Qty Box
-                        </label>
-                        <div className="relative">
+                    {/* Row 1 : Qty Pack | Total Box */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
+                                Qty Pack
+                            </label>
+                            <input
+                                type="number"
+                                value={qtyPack}
+                                disabled
+                                className="w-full px-4 py-2 rounded-lg bg-gray-100 text-gray-500 border border-gray-200 text-sm md:text-base cursor-not-allowed"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
+                                Total Box
+                            </label>
+                            <input
+                                type="number"
+                                value={totalBox}
+                                disabled
+                                className="w-full px-4 py-2 rounded-lg bg-gray-100 text-gray-700 border border-gray-200 text-sm md:text-base font-semibold cursor-not-allowed"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Row 2 : Qty Box | Qty Cetak */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
+                                Qty Box
+                            </label>
                             <input
                                 type="number"
                                 min="1"
                                 value={currentQty}
                                 onChange={(e) => setNewQtyAction(Number(e.target.value))}
                                 className={`w-full px-4 py-2 rounded-lg border shadow-sm text-sm md:text-base 
-                                    ${isPrinted 
-                                        ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' 
+                    ${isPrinted
+                                        ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
                                         : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-gray-900'
                                     }`}
                                 disabled={isSaving || isPrinted}
                                 autoFocus={!isPrinted}
                             />
                         </div>
+
+                        <div>
+                            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
+                                Qty Cetak
+                            </label>
+                            <input
+                                type="number"
+                                min="1"
+                                value={currentQtyCetak}
+                                onChange={(e) => setNewQtyCetakAction(Number(e.target.value))}
+                                className="w-full px-4 py-2 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm md:text-base text-gray-900"
+                                disabled={isSaving}
+                                autoFocus={isPrinted}
+                            />
+                        </div>
                     </div>
 
-                    <div>
-                        <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
-                            Qty Cetak
-                        </label>
-                        <input
-                            type="number"
-                            min="1"
-                            value={currentQtyCetak}
-                            onChange={(e) => setNewQtyCetakAction(Number(e.target.value))}
-                            className="w-full px-4 py-2 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm md:text-base text-gray-900"
-                            disabled={isSaving}
-                            autoFocus={isPrinted}
-                        />
-                    </div>
                 </div>
+
 
                 {/* Footer */}
                 <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
