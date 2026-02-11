@@ -218,8 +218,14 @@ export default function QrGeneration() {
                             // GENERATE ID UNIK
                             const uniqueQRId = generateUUID();
 
-                            // Format: partnumber#partdesc#lotnumber#qtybox#UNIQUE_ID
-                            const rawData = `${item.partNumber}#${item.description}#${item.lotNumber}#${item.qtyBox}#${uniqueQRId}#${item.timePrint ? item.timePrint : timestamp}`;
+                            let rawData = '';
+
+                            if (item.custID === 'C00010') {
+                                const runningNumber = (index + 1).toString().padStart(8, '0');
+                                rawData = `${item.partNumber}|${item.custID}|${item.qtyPack}|${item.lotNumber}|${runningNumber}`;
+                            } else {
+                                rawData = `${item.partNumber}#${item.description}#${item.lotNumber}#${item.qtyBox}#${uniqueQRId}#${item.timePrint ? item.timePrint : timestamp}`;
+                            }
 
                             // Buat Gambar Base64
                             const qrBase64 = await QRCode.toDataURL(rawData, {
@@ -306,6 +312,8 @@ export default function QrGeneration() {
                 ShortChar20: editingItem.entryPerson,
                 ShortChar02: editingItem.lotNumber,
                 ShortChar01: editingItem.timePrint,
+                ShortChar03: editingItem.custID,
+                ShortChar04: editingItem.custName,
                 Number03: newQtyPack,
                 Number04: newTotalBox,
                 Number02: newQtyCetak,
