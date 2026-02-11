@@ -56,7 +56,7 @@ export default function StockTable({ warehouse, period }: Props) {
 
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden w-full relative flex flex-col h-full">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center flex-shrink-0">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center shrink-0">
                 <h2 className="text-lg font-semibold text-gray-800">
                     Gudang Finish Good Stock
                 </h2>
