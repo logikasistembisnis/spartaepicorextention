@@ -8,6 +8,7 @@ type ApiPart = {
   Part_PartDescription: string;
   Part_ClassID: string;
   Part_IUM: string;
+  Part_standartpack_c: number;
   RowIdent: string;
 };
 
@@ -22,7 +23,11 @@ type ApiResponse = {
   error?: string;
 };
 
-export async function getPartsList(): Promise<ApiResponse> {
+export async function getPartsList(
+  searchTerm = "",
+  skip = 0,
+  take = 50
+): Promise<ApiResponse> {
   // Ambil Auth Token dari Cookie
   const cookieStore = await cookies();
   const authHeader = cookieStore.get("session_auth")?.value;
@@ -31,9 +36,22 @@ export async function getPartsList(): Promise<ApiResponse> {
     return { success: false, error: "Unauthorized: Silakan login kembali." };
   }
 
+  const filterParts: string[] = []
+
+  if (searchTerm) {
+    filterParts.push(
+      `(contains(Part_PartNum,'${searchTerm}') or contains(Part_PartDescription,'${searchTerm}'))`
+    )
+  }
+
+  const filterQuery =
+    filterParts.length > 0 ? `&$filter=${filterParts.join(" and ")}` : ""
+
+
   try {
     const response = await apiFetch(
-      `/v2/odata/166075/BaqSvc/UDNEL_PartFG/Data`,
+      `/v2/odata/166075/BaqSvc/UDNEL_PartFG/Data` +
+      `?$orderby=Part_PartNum asc&$top=${take}&$skip=${skip}${filterQuery}`,
       {
         method: "GET",
         authHeader,
