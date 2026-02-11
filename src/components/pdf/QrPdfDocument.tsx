@@ -5,10 +5,11 @@ import logoImage from '../../../public/assets/logo.png';
 export type QrPdfItem = {
     partNumber: string;
     description: string;
-    qtyBox: number;
+    qtyPack: number;
     sysRowId: string;
     qrImageSrc: string;
     lotNumber?: string;
+    custID?: string;
 }
 
 // --- KONFIGURASI LAYOUT ---
@@ -228,12 +229,12 @@ export const QrPdfDocument = ({ items }: { items: QrPdfItem[] }) => {
                                     <View style={styles.valueCol}><Text style={styles.valueText}>{item.partNumber}</Text></View>
                                 </View>
                                 <View style={styles.stdRow}>
-                                    <View style={styles.labelCol}><Text style={styles.labelText}>MODEL</Text></View>
-                                    <View style={styles.valueCol}><Text style={styles.valueText}></Text></View>
+                                    <View style={styles.labelCol}><Text style={styles.labelText}>CUSTOMER ID</Text></View>
+                                    <View style={styles.valueCol}><Text style={styles.valueText}>{item.custID || ''}</Text></View>
                                 </View>
                                 <View style={styles.stdRow}>
                                     <View style={styles.labelCol}><Text style={styles.labelText}>JUMLAH</Text></View>
-                                    <View style={styles.valueCol}><Text style={styles.valueText}>{item.qtyBox} PCS</Text></View>
+                                    <View style={styles.valueCol}><Text style={styles.valueText}>{item.qtyPack} PCS</Text></View>
                                 </View>
                                 <View style={styles.stdRow}>
                                     <View style={styles.labelCol}><Text style={styles.labelText}>TGL / SHIFT</Text></View>
