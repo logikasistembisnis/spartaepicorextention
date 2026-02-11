@@ -14,9 +14,13 @@ export type UpdateUD14Item = {
   Character01?: string;
   Number01?: number;
   Number02?: number;
+  Number03?: number;
+  Number04?: number;
   ShortChar20?: string;
   ShortChar01?: string;
   ShortChar02?: string;
+  ShortChar03?: string;
+  ShortChar04?: string;
   Date01: string;
 };
 

@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { TrashIcon, PlusIcon, PrinterIcon, ArrowPathIcon, PencilSquareIcon, CalendarDaysIcon } from '@heroicons/react/24/outline'
-import AddNew from '@/components/modals/qrgen/AddNew'
 import { getGeneratedQRList, qrList, deleteQRItem } from '@/api/qr/qrlist'
 import { updateUD14, UpdateUD14Item } from '@/api/qr/updateqrcode'
 import QRCode from 'qrcode';
 import { pdf } from '@react-pdf/renderer'
 import { QrPdfDocument, QrPdfItem } from '@/components/pdf/QrPdfDocument'
 import EditQty from '@/components/modals/qrgen/EditQty'
+import QrWizard from '@/components/modals/qrgen/QRWizard'
 
 type PartItem = {
     company: string
@@ -18,12 +18,16 @@ type PartItem = {
     lotNumber: string
     qtyBox: number
     qtyCetak: number
+    qtyPack: number
+    totalBox: number
     key5: string
     sysRowId: string
     sysRevId: number
     timePrint: string
     entryPerson: string
     entryDate: string
+    custID: string
+    custName: string
 }
 
 // Helper: Generate Random UUID
@@ -74,6 +78,8 @@ export default function QrGeneration() {
     const [newQty, setNewQty] = useState<number>(0)
     const [newQtyCetak, setNewQtyCetak] = useState<number>(0)
     const [isSavingEdit, setIsSavingEdit] = useState(false)
+    const [newQtyPack, setNewQtyPack] = useState<number>(0)
+    const [newTotalBox, setNewTotalBox] = useState<number>(0)
 
     const fetchQRData = useCallback(async () => {
         setLoading(true)
@@ -96,14 +102,18 @@ export default function QrGeneration() {
                         partNumber: item.UD14_Key2,
                         description: item.UD14_Character01,
                         lotNumber: item.UD14_ShortChar02,
-                        qtyBox: item.UD14_Number01,
-                        qtyCetak: item.UD14_Number02,
+                        qtyBox: item.UD14_Number01 || 0,
+                        qtyCetak: item.UD14_Number02 || 0,
+                        qtyPack: item.UD14_Number03 || 0,
+                        totalBox: item.UD14_Number04 || 0,
                         key5: item.UD14_Key5,
                         sysRowId: item.UD14_SysRowID,
                         sysRevId: item.UD14_SysRevID,
                         timePrint: item.UD14_ShortChar01,
                         entryPerson: item.UD14_ShortChar20,
-                        entryDate: fixedDate
+                        entryDate: fixedDate,
+                        custID: item.UD14_ShortChar03 || '',
+                        custName: item.UD14_ShortChar04 || '',
                     }
                 })
 
@@ -191,9 +201,13 @@ export default function QrGeneration() {
                         SysRevID: item.sysRevId,
                         ShortChar01: timestamp,
                         ShortChar02: item.lotNumber,
+                        ShortChar03: item.custID,
+                        ShortChar04: item.custName,
                         Character01: item.description,
                         Number01: item.qtyBox,
                         Number02: item.qtyCetak,
+                        Number03: item.qtyPack,
+                        Number04: item.totalBox,
                         ShortChar20: item.entryPerson,
                         Date01: item.entryDate
                     });
@@ -219,10 +233,11 @@ export default function QrGeneration() {
                                 partNumber: item.partNumber,
                                 description: item.description,
                                 lotNumber: item.lotNumber,
-                                qtyBox: item.qtyBox,
+                                qtyPack: item.qtyPack,
                                 qtyCetak: item.qtyCetak,
                                 sysRowId: uniqueQRId,
-                                qrImageSrc: qrBase64
+                                qrImageSrc: qrBase64,
+                                custID: item.custID,
                             };
                         })
                     );
@@ -261,8 +276,18 @@ export default function QrGeneration() {
         setEditingItem(item);
         setNewQty(item.qtyBox);
         setNewQtyCetak(item.qtyCetak);
+        setNewQtyPack(item.qtyPack);
+        setNewTotalBox(item.totalBox);
         setIsEditModalOpen(true);
     };
+
+    useEffect(() => {
+        if (newQtyPack > 0) {
+            setNewTotalBox(Math.ceil(newQty / newQtyPack))
+        } else {
+            setNewTotalBox(0)
+        }
+    }, [newQty, newQtyPack])
 
     const handleSaveEdit = async () => {
         if (!editingItem) return;
@@ -281,6 +306,8 @@ export default function QrGeneration() {
                 ShortChar20: editingItem.entryPerson,
                 ShortChar02: editingItem.lotNumber,
                 ShortChar01: editingItem.timePrint,
+                Number03: newQtyPack,
+                Number04: newTotalBox,
                 Number02: newQtyCetak,
                 Date01: editingItem.entryDate
             }];
@@ -339,9 +366,9 @@ export default function QrGeneration() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="flex flex-col gap-4">
             {/* Header Page */}
-            <div className="flex flex-col justify-between gap-4">
+            <div className="flex-none flex flex-col justify-between gap-4">
                 <div>
                     <h2 className="text-xl md:text-2xl font-bold text-gray-800">Generated QR Code</h2>
                 </div>
@@ -389,20 +416,13 @@ export default function QrGeneration() {
             </div>
 
             {/* Table Container */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden grow relative flex flex-col max-h-[65vh]">
-                {loading && (
-                    <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center">
-                        <div className="flex flex-col items-center">
-                            <ArrowPathIcon className="h-5 md:h-8 w-8 text-orange-500 animate-spin mb-2" />
-                            <span className="text-xs md:text-sm text-gray-500">Memuat data...</span>
-                        </div>
-                    </div>
-                )}
-                <div className="overflow-x-auto">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative flex flex-col h-fit max-h-[75vh]">
+                <div className="overflow-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
                             <tr>
-                                <th className="px-4 py-4 w-12 text-center bg-gray-50">
+                                {/* Checkbox - Fix Width */}
+                                <th className="px-4 py-4 w-12 min-w-12.5 text-center bg-gray-50">
                                     <input
                                         type="checkbox"
                                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
@@ -411,84 +431,97 @@ export default function QrGeneration() {
                                         disabled={loading || items.length === 0}
                                     />
                                 </th>
-                                <th className="px-4 md:px-6 py-2 md:py-4 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider">No</th>
-                                <th className="px-4 md:px-6 py-2 md:py-4 text-left text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider">Part Number</th>
-                                <th className="px-4 md:px-6 py-2 md:py-4 text-left text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider">Description</th>
-                                <th className="px-4 md:px-6 py-2 md:py-4 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider">Lot Number</th>
-                                <th className="px-4 md:px-6 py-2 md:py-4 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider">Qty Box</th>
-                                <th className="px-4 md:px-6 py-2 md:py-4 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider">Qty Cetak</th>
-                                <th className="px-4 md:px-6 py-2 md:py-4 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider">Action</th>
+                                <th className="px-4 md:px-6 py-2 md:py-4 min-w-16 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">No</th>
+                                <th className="px-4 md:px-6 py-2 md:py-4 min-w-40 text-left text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Part Number</th>
+                                <th className="px-4 md:px-6 py-2 md:py-4 min-w-55 text-left text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Description</th>
+                                <th className="px-4 md:px-6 py-2 md:py-4 min-w-40 text-left text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Customer ID</th>
+                                <th className="px-4 md:px-6 py-2 md:py-4 min-w-55 text-left text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Customer Name</th>
+                                <th className="px-4 md:px-6 py-2 md:py-4 min-w-40 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Lot Number</th>
+                                <th className="px-4 md:px-6 py-2 md:py-4 min-w-30 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Qty Pack</th>
+                                <th className="px-4 md:px-6 py-2 md:py-4 min-w-30 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Qty Box</th>
+                                <th className="px-4 md:px-6 py-2 md:py-4 min-w-30 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Qty Cetak</th>
+                                <th className="px-4 md:px-6 py-2 md:py-4 min-w-30 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Total Box</th>
+                                <th className="px-4 md:px-6 py-2 md:py-4 min-w-30 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Action</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {!loading && filteredItems.length > 0 ? (
-                                filteredItems.map((item, index) => {
-                                    const isSelected = selectedIds.has(item.id);
-                                    const isPrinted = !!item.timePrint;
-                                    return (
-                                        <tr
-                                            key={item.id}
-                                            className={`transition-colors ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
-                                            onClick={() => handleSelectOne(item.id)}
-                                        >
-                                            <td className="px-4 py-2 text-center" onClick={(e) => e.stopPropagation()}>
-                                                <input
-                                                    type="checkbox"
-                                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-                                                    checked={isSelected}
-                                                    onChange={() => handleSelectOne(item.id)}
-                                                />
-                                            </td>
-                                            <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900 text-center">{index + 1}</td>
-                                            <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900">{item.partNumber}</td>
-                                            <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900">{item.description}</td>
-                                            <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900 text-center">{item.lotNumber}</td>
-                                            <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900 text-center">{item.qtyBox}</td>
-                                            <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900 text-center">{item.qtyCetak}</td>
-                                            <td className="px-4 md:px-6 py-2 whitespace-nowrap text-center">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    {/* TOMBOL EDIT */}
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); handleEditClick(item); }}
-                                                        className="text-blue-500 hover:text-blue-700 p-2 rounded-full hover:bg-blue-50"
-                                                        title="Edit Qty"
-                                                    >
-                                                        <PencilSquareIcon className="h-5 w-5" />
-                                                    </button>
-
-                                                    {/* TOMBOL DELETE */}
-                                                    <button onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDelete(item);
-                                                    }}
-                                                        disabled={!!item.timePrint}
-                                                        className={`p-2 rounded-full transition-colors ${!!item.timePrint
-                                                            ? 'text-gray-300 cursor-not-allowed' // Style jika disabled 
-                                                            : 'text-red-500 hover:text-red-700 hover:bg-red-50' // Style jika aktif (merah)
-                                                            }`}
-                                                        title={!!item.timePrint ? "Sudah diprint, tidak bisa dihapus" : "Hapus"}
-                                                    >
-                                                        <TrashIcon className="h-5 w-5" />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )
-                                })
-                            ) : !loading ? (
+                            {loading ? (
                                 <tr>
-                                    <td colSpan={8} className="px-6 py-12 text-center text-gray-400">Data Kosong</td>
+                                    <td colSpan={7} className="px-6 py-12 text-center">
+                                        <div className="flex flex-col items-center justify-center">
+                                            <ArrowPathIcon className="h-8 w-8 text-orange-500 animate-spin mb-2" />
+                                            <span className="text-sm text-gray-500 font-medium">Memuat data...</span>
+                                        </div>
+                                    </td>
                                 </tr>
-                            ) : null}
+                            ) :
+                                filteredItems.length > 0 ? (
+                                    filteredItems.map((item, index) => {
+                                        const isSelected = selectedIds.has(item.id);
+                                        return (
+                                            <tr
+                                                key={item.id}
+                                                className={`transition-colors ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                                                onClick={() => handleSelectOne(item.id)}
+                                            >
+                                                <td className="px-4 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                                                    <input
+                                                        type="checkbox"
+                                                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                                                        checked={isSelected}
+                                                        onChange={() => handleSelectOne(item.id)}
+                                                    />
+                                                </td>
+                                                <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900 text-center">{index + 1}</td>
+                                                <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900">{item.partNumber}</td>
+                                                <td className="px-4 md:px-6 py-2 text-xs md:text-sm text-gray-900 whitespace-normal">{item.description}</td>
+                                                <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900">{item.custID}</td>
+                                                <td className="px-4 md:px-6 py-2 text-xs md:text-sm text-gray-900 whitespace-normal">{item.custName}</td>
+                                                <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900 text-center">{item.lotNumber}</td>
+                                                <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900 text-center">{item.qtyPack}</td>
+                                                <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900 text-center">{item.qtyBox}</td>
+                                                <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900 text-center">{item.qtyCetak}</td>
+                                                <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900 text-center">{item.totalBox}</td>
+                                                <td className="px-4 md:px-6 py-2 whitespace-nowrap text-center">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleEditClick(item); }}
+                                                            className="text-blue-500 hover:text-blue-700 p-2 rounded-full hover:bg-blue-50"
+                                                            title="Edit Qty"
+                                                        >
+                                                            <PencilSquareIcon className="h-5 w-5" />
+                                                        </button>
+                                                        <button onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDelete(item);
+                                                        }}
+                                                            disabled={!!item.timePrint}
+                                                            className={`p-2 rounded-full transition-colors ${!!item.timePrint
+                                                                ? 'text-gray-300 cursor-not-allowed'
+                                                                : 'text-red-500 hover:text-red-700 hover:bg-red-50'}`}
+                                                            title={!!item.timePrint ? "Sudah diprint, tidak bisa dihapus" : "Hapus"}
+                                                        >
+                                                            <TrashIcon className="h-5 w-5" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })
+                                ) : !loading ? (
+                                    <tr>
+                                        <td colSpan={7} className="px-6 py-12 text-center text-gray-400">Data Kosong</td>
+                                    </tr>
+                                ) : null}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <AddNew
+            <QrWizard
                 isOpen={isModalOpen}
                 onCloseAction={() => setIsModalOpen(false)}
-                onSaveAction={() => handleRefreshAfterAdd()}
+                onSaveAction={handleRefreshAfterAdd}
             />
 
             <EditQty
@@ -503,6 +536,8 @@ export default function QrGeneration() {
                 setNewQtyAction={setNewQty}
                 currentQtyCetak={newQtyCetak}
                 setNewQtyCetakAction={setNewQtyCetak}
+                qtyPack={newQtyPack}
+                totalBox={newTotalBox}
                 isSaving={isSavingEdit}
                 isPrinted={!!editingItem?.timePrint}
             />
