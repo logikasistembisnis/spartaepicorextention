@@ -466,7 +466,7 @@ export default function AddNew({ customer, onCloseAction, onSaveAction }: AddNew
                                                             if (!isChecked || isNaN(qtyBox)) return "-"
                                                             if (qtyPack === 0) return "0"
 
-                                                            return (qtyBox / qtyPack).toFixed(2)
+                                                            return Math.ceil(qtyBox / qtyPack)
                                                         })()}
                                                     </span>
                                                 </td>

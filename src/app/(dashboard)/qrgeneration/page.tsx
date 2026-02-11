@@ -96,6 +96,8 @@ export default function QrGeneration() {
                         fixedDate = item.UD14_Date01.split('T')[0];
                     }
 
+                    const rawTotalBox = item.UD14_Number04 || 0;
+
                     return {
                         company: item.UD14_Company,
                         id: item.UD14_Key1,
@@ -105,7 +107,7 @@ export default function QrGeneration() {
                         qtyBox: item.UD14_Number01 || 0,
                         qtyCetak: item.UD14_Number02 || 0,
                         qtyPack: item.UD14_Number03 || 0,
-                        totalBox: item.UD14_Number04 || 0,
+                        totalBox: Math.ceil(rawTotalBox),
                         key5: item.UD14_Key5,
                         sysRowId: item.UD14_SysRowID,
                         sysRevId: item.UD14_SysRevID,
@@ -222,7 +224,7 @@ export default function QrGeneration() {
 
                             if (item.custID === 'C00010') {
                                 const runningNumber = (index + 1).toString().padStart(8, '0');
-                                rawData = `${item.partNumber}|${item.custID}|${item.qtyPack}|${item.lotNumber}|${runningNumber}`;
+                                rawData = `${item.partNumber}|1201362|${item.qtyPack}|${item.lotNumber}|${runningNumber}|${item.timePrint ? item.timePrint : timestamp}`;
                             } else {
                                 rawData = `${item.partNumber}#${item.description}#${item.lotNumber}#${item.qtyBox}#${uniqueQRId}#${item.timePrint ? item.timePrint : timestamp}`;
                             }
@@ -424,7 +426,7 @@ export default function QrGeneration() {
             </div>
 
             {/* Table Container */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative flex flex-col h-fit max-h-[75vh]">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative flex flex-col h-fit max-h-[65vh]">
                 <div className="overflow-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
