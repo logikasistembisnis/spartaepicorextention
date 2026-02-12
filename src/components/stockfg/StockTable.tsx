@@ -7,9 +7,11 @@ import { ArrowPathIcon, ExclamationCircleIcon } from '@heroicons/react/24/outlin
 type Props = {
     warehouse: string;
     period: string;
+    selectedPartNum: string;
+    onSelectPart: (partNum: string) => void;
 }
 
-export default function StockTable({ warehouse, period }: Props) {
+export default function StockTable({ warehouse, period, selectedPartNum, onSelectPart }: Props) {
     const [data, setData] = useState<StockItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -19,6 +21,15 @@ export default function StockTable({ warehouse, period }: Props) {
         setRefreshKey((prev) => prev + 1);
     };
 
+    // Format Number Helper
+    const formatNumber = (num: number | null | undefined) => {
+        const value = num ?? 0;
+        return new Intl.NumberFormat('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(value);
+    };
+
     useEffect(() => {
         if (!warehouse || !period) return;
         let isMounted = true;
@@ -26,11 +37,17 @@ export default function StockTable({ warehouse, period }: Props) {
         const fetchData = async () => {
             setIsLoading(true);
             setError(null);
+
+            if (isMounted) onSelectPart('');
+
             const result = await getStockData(period);
-            
+
             if (isMounted) {
                 if (result.success && result.data) {
                     setData(result.data);
+                    if (result.data.length > 0) {
+                        onSelectPart(result.data[0].Calculated_PartNum);
+                    }
                 } else {
                     setError(result.message || "Gagal mengambil data stok");
                     setData([]);
@@ -41,18 +58,8 @@ export default function StockTable({ warehouse, period }: Props) {
 
         fetchData();
         return () => { isMounted = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [warehouse, period, refreshKey]);
-
-    const formatNumber = (num: number | null | undefined) => {
-        // Jika null/undefined, dianggap 0
-        const value = num ?? 0; 
-        
-        // 'en-US' untuk pemisah titik (0.00)
-        return new Intl.NumberFormat('en-US', { 
-            minimumFractionDigits: 2, // Memaksa minimal 2 desimal (0 -> 0.00)
-            maximumFractionDigits: 2  // Membatasi maksimal 2 desimal
-        }).format(value);
-    };
 
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden w-full relative flex flex-col h-full">
@@ -62,91 +69,101 @@ export default function StockTable({ warehouse, period }: Props) {
                 </h2>
             </div>
 
-            {/* 2. Content Area */}
-            {isLoading && data.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-                    <ArrowPathIcon className="h-8 w-8 animate-spin mb-2 text-orange-500" />
-                    <p>Memuat data stok...</p>
-                </div>
-            ) : error ? (
-                <div className="flex flex-col items-center justify-center h-64 text-red-500 px-4 text-center">
-                    <ExclamationCircleIcon className="h-10 w-10 mb-2" />
-                    <p className="font-medium">{error}</p>
-                    <button onClick={handleRefresh} className="mt-4 text-sm underline hover:text-red-700">Coba Lagi</button>
-                </div>
-            ) : (
-                <div className="overflow-auto max-h-80 w-full"> 
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">PartNum</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">Description</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">Saldo Awal</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">Mutasi In</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">Mutasi Out</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">Saldo Akhir</th>
-                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">IUM</th>
-                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">Class ID</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">Description</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {data.length > 0 ? (
-                                data.map((item, idx) => (
-                                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-600">
-                                            {item.Calculated_PartNum}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
-                                            {item.Part_PartDescription}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-right text-gray-600">
-                                            {formatNumber(item.Calculated_SaldoAwal)}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-right text-gray-600">
-                                            {item.Calculated_MutasiIn !== 0 
-                                                ? `+${formatNumber(item.Calculated_MutasiIn)}` 
-                                                : formatNumber(0) 
-                                            }
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-right text-gray-600">
-                                            {item.Calculated_MutasiOut !== 0 
-                                                ? `-${formatNumber(item.Calculated_MutasiOut)}` 
-                                                : formatNumber(0)
-                                            }
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-right text-gray-600">
-                                            {formatNumber(item.Calculated_SaldoAkhir)}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-center text-gray-600">
-                                            {item.Part_IUM}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-center text-gray-600">
-                                            {item.Part_ClassID}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
-                                            {item.PartClass_Description}
+            <div className="flex-1 relative overflow-hidden flex flex-col">
+                {isLoading && (
+                    <div className="absolute inset-0 z-50 bg-white/80 flex flex-col items-center justify-center text-gray-400 backdrop-blur-[1px]">
+                        <ArrowPathIcon className="h-8 w-8 animate-spin mb-2 text-orange-500" />
+                        <p>Memuat data stok...</p>
+                    </div>
+                )}
+
+                {error ? (
+                    <div className="flex flex-col items-center justify-center h-64 text-red-500 px-4 text-center">
+                        <ExclamationCircleIcon className="h-10 w-10 mb-2" />
+                        <p className="font-medium">{error}</p>
+                        <button onClick={handleRefresh} className="mt-4 text-sm underline hover:text-red-700">Coba Lagi</button>
+                    </div>
+                ) : (
+                    <div className="overflow-auto max-h-80 w-full">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap w-50">PartNum</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap w-70">Description</th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap w-25">Saldo Awal</th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap w-25">Mutasi In</th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap w-25">Mutasi Out</th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap w-25">Saldo Akhir</th>
+                                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">IUM</th>
+                                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">Class ID</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap w-50">Description</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {data.length > 0 ? (
+                                    data.map((item, idx) => {
+                                        const isSelected = item.Calculated_PartNum === selectedPartNum;
+                                        return (
+                                            <tr
+                                                key={idx}
+                                                onClick={() => onSelectPart(item.Calculated_PartNum)}
+                                                className={`transition-colors cursor-pointer ${isSelected
+                                                    ? 'bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500'
+                                                    : 'hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                <td
+                                                    className="px-6 py-3 text-sm font-medium text-gray-600 max-w-50 truncate"
+                                                    title={item.Calculated_PartNum}
+                                                >
+                                                    {item.Calculated_PartNum}
+                                                </td>
+                                                <td
+                                                    className="px-6 py-3 text-sm text-gray-600 max-w-70 truncate"
+                                                    title={item.Part_PartDescription}
+                                                >
+                                                    {item.Part_PartDescription}
+                                                </td>
+
+                                                <td className="px-6 py-3 whitespace-nowrap text-sm text-right text-gray-600">
+                                                    {formatNumber(item.Calculated_SaldoAwal)}
+                                                </td>
+                                                <td className="px-6 py-3 whitespace-nowrap text-sm text-right text-gray-600">
+                                                    {item.Calculated_MutasiIn !== 0 ? `${formatNumber(item.Calculated_MutasiIn)}` : formatNumber(0)}
+                                                </td>
+                                                <td className="px-6 py-3 whitespace-nowrap text-sm text-right text-gray-600">
+                                                    {item.Calculated_MutasiOut !== 0 ? `${formatNumber(item.Calculated_MutasiOut)}` : formatNumber(0)}
+                                                </td>
+                                                <td className="px-6 py-3 whitespace-nowrap text-sm text-right text-gray-600">
+                                                    {formatNumber(item.Calculated_SaldoAkhir)}
+                                                </td>
+                                                <td className="px-6 py-3 whitespace-nowrap text-sm text-center text-gray-600">
+                                                    {item.Part_IUM}
+                                                </td>
+                                                <td className="px-6 py-3 whitespace-nowrap text-sm text-center text-gray-600">
+                                                    {item.Part_ClassID}
+                                                </td>
+                                                <td
+                                                    className="px-6 py-3 text-sm text-gray-600 max-w-50 truncate"
+                                                    title={item.PartClass_Description}
+                                                >
+                                                    {item.PartClass_Description}
+                                                </td>
+                                            </tr>
+                                        )
+                                    })
+                                ) : (
+                                    <tr>
+                                        <td colSpan={9} className="px-6 py-12 text-center text-gray-400 italic">
+                                            Tidak ada data stok untuk periode {period}
                                         </td>
                                     </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={9} className="px-6 py-12 text-center text-gray-400 italic">
-                                        Tidak ada data stok untuk periode {period}
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-
-            {/* Loading Overlay */}
-            {isLoading && data.length > 0 && (
-                <div className="absolute inset-0 bg-white/50 z-20 flex items-center justify-center">
-                    <ArrowPathIcon className="h-8 w-8 animate-spin text-orange-500" />
-                </div>
-            )}
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
         </div>
     )
 }
