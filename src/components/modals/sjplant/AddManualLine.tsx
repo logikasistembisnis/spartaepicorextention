@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { SjPlantLine, WarehouseOption } from '@/types/sjPlant'
 import { getPartsList } from '@/api/sjplant/part'
 import { MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import { getPartWarehouseList } from '@/api/sjplant/whse'
+import { useDebounce } from "use-debounce"
 
-// --- TIPE DATA ---
 type ApiPart = {
     Part_PartNum: string;
     Part_PartDescription: string;
@@ -27,98 +27,105 @@ export default function AddManualLineModal({ open, onClose, onAdd, nextLineNum, 
     // --- STATE ---
     const [partList, setPartList] = useState<ApiPart[]>([])
     const [isLoading, setIsLoading] = useState(false)
+    const [isLoadingMore, setIsLoadingMore] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [error, setError] = useState<string | null>(null)
+    
+    // Konfigurasi Pagination
+    const TAKE = 50
+    const [skip, setSkip] = useState(0)
+    const [hasMore, setHasMore] = useState(true)
 
-    // Ref untuk memastikan fetch hanya sekali
-    const hasFetched = useRef(false)
+    // Debounce search agar tidak hit API setiap ketukan
+    const [debouncedSearch] = useDebounce(searchQuery, 500)
 
-    // --- 1. FETCH API (Safe & Clean) ---
+    // --- RESET STATE SAAT MODAL DITUTUP ---
     useEffect(() => {
-        if (!open || hasFetched.current || partList.length > 0) return
-
-        let isMounted = true
-
-        const fetchData = async () => {
-            setIsLoading(true)
-            setError(null)
-            try {
-                const res = await getPartsList()
-                if (isMounted) {
-                    if (res.success && res.data) {
-                        setPartList(res.data)
-                        hasFetched.current = true
-                    } else {
-                        setError("Gagal memuat data part.")
-                    }
-                }
-            } catch (err) {
-                if (isMounted) setError("Terjadi kesalahan sistem.")
-            } finally {
-                if (isMounted) setIsLoading(false)
-            }
+        if (!open) {
+            setPartList([])
+            setSkip(0)
+            setSearchQuery('')
+            setHasMore(true)
+            setIsLoading(false)
         }
-
-        fetchData()
-
-        return () => { isMounted = false }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open])
 
-    // --- 2. FILTER SEARCH ---
-    const filteredParts = useMemo(() => {
-        if (!searchQuery) return partList
-        const lower = searchQuery.toLowerCase()
-        return partList.filter(p =>
-            p.Part_PartNum.toLowerCase().includes(lower) ||
-            p.Part_PartDescription.toLowerCase().includes(lower)
-        )
-    }, [partList, searchQuery])
+    useEffect(() => {
+        if (!open) return
+        if (searchQuery !== debouncedSearch) return;
 
-    // --- 3. PILIH PART (ON CLICK ROW) ---
+        const loadData = async () => {
+            if (skip === 0) {
+                setIsLoading(true)
+            } else {
+                setIsLoadingMore(true)
+            }
+
+            setError(null)
+
+            const res = await getPartsList(debouncedSearch, skip, TAKE)
+
+            if (res.success && res.data) {
+                setPartList(prev => {
+                    if (skip === 0) return res.data ?? []
+                    return [...prev, ...(res.data ?? [])]
+                })
+
+                // Cek apakah data sudah habis
+                if ((res.data?.length || 0) < TAKE) {
+                    setHasMore(false)
+                } else {
+                    setHasMore(true)
+                }
+            } else {
+                setError(res.error || "Gagal memuat data part.")
+            }
+
+            setIsLoading(false)
+            setIsLoadingMore(false)
+        }
+
+        loadData()
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [debouncedSearch, skip, open]) 
+
+    // --- 2. HANDLE SEARCH INPUT ---
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(e.target.value);
+        setSkip(0); 
+    };
+
+    // --- 3. PILIH PART ---
     const handleSelectPart = async (part: ApiPart) => {
         setIsLoading(true);
-
-        // 1. Definisikan array menggunakan Interface WarehouseOption
         let whOptions: WarehouseOption[] = [];
         let defaultWh = '';
 
-        // 2. Fetch Warehouse jika shipFrom ada
         if (shipFrom) {
             try {
                 const resWh = await getPartWarehouseList(part.Part_PartNum, shipFrom);
-                
                 if (resWh.success && resWh.data) {
-                    // MAPPING TANPA ANY
-                    // TypeScript akan menyimpulkan tipe 'w' dari return type API
                     whOptions = resWh.data.map((w) => ({
-                        code: w.PartWhse_WarehouseCode, 
-                        name: w.Warehse_Description     
+                        code: w.PartWhse_WarehouseCode,
+                        name: w.Warehse_Description
                     }));
-                    
-                    if (whOptions.length === 1) {
-                        defaultWh = whOptions[0].code;
-                    }
+                    if (whOptions.length === 1) defaultWh = whOptions[0].code;
                 }
             } catch (err) {
-                console.error("Gagal fetch warehouse manual", err);
+                console.error("Gagal fetch warehouse", err);
             }
         }
 
-        // 3. Buat Object Line
         const newLine: SjPlantLine = {
             lineNum: nextLineNum,
             partNum: part.Part_PartNum,
             partDesc: part.Part_PartDescription,
             uom: part.Part_IUM,
-            
-            // Masukkan data yang sudah ditapping
-            availableWarehouses: whOptions, 
+            availableWarehouses: whOptions,
             warehouseCode: defaultWh,
-            
-            // Default Values
             binNum: '',
-            availableBins: [], 
+            availableBins: [],
             lotNum: '',
             qty: 0,
             comment: '',
@@ -138,7 +145,6 @@ export default function AddManualLineModal({ open, onClose, onAdd, nextLineNum, 
             <div className="fixed inset-0 bg-gray-900/65 bg-opacity-50 transition-opacity backdrop-blur-sm" onClick={onClose}></div>
 
             <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-                {/* Modal Wrapper */}
                 <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all w-full sm:my-8 sm:w-full sm:max-w-3xl border border-gray-200">
 
                     {/* HEADER */}
@@ -146,14 +152,14 @@ export default function AddManualLineModal({ open, onClose, onAdd, nextLineNum, 
                         <div className="flex justify-between items-start mb-3">
                             <div>
                                 <h3 className="text-base font-semibold leading-6 text-gray-900">Pilih Part</h3>
-                                <p className="text-xs text-gray-500 mt-1">Klik pada baris untuk menambahkan part ke dalam list.</p>
+                                <p className="text-xs text-gray-500 mt-1">Klik pada baris untuk menambahkan part.</p>
                             </div>
                             <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
                                 <XMarkIcon className="h-6 w-6" />
                             </button>
                         </div>
 
-                        {/* SEARCH INPUT (Style sama dengan referensi) */}
+                        {/* SEARCH INPUT */}
                         <div className="relative mt-2 mb-2">
                             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                                 <MagnifyingGlassIcon className="h-4 w-4 text-gray-400" />
@@ -164,15 +170,14 @@ export default function AddManualLineModal({ open, onClose, onAdd, nextLineNum, 
                                 className="block w-full rounded-md border-0 py-2 pl-9 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm"
                                 placeholder="Cari Part Number / Deskripsi..."
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onChange={handleSearchChange} 
                             />
                         </div>
                     </div>
 
-                    {/* TABLE CONTENT CONTAINER */}
+                    {/* TABLE CONTENT */}
                     <div className="relative h-96 flex flex-col bg-white">
-
-                        {/* LOADING STATE */}
+                        
                         {isLoading && (
                             <div className="absolute inset-0 z-20 flex items-center justify-center flex-col gap-2 bg-white bg-opacity-90">
                                 <ArrowPathIcon className="h-8 w-8 text-blue-600 animate-spin" />
@@ -180,49 +185,42 @@ export default function AddManualLineModal({ open, onClose, onAdd, nextLineNum, 
                             </div>
                         )}
 
-                        {/* ERROR STATE */}
                         {error && !isLoading && (
                             <div className="flex-1 flex items-center justify-center p-8 text-center text-red-500 text-sm">
                                 {error}
                             </div>
                         )}
 
-                        {/* TABLE */}
                         {!isLoading && !error && (
-                            <div className="flex-1 overflow-y-auto overflow-x-auto">
+                            <div className="flex-1 overflow-y-auto overflow-x-auto" onScroll={(e) => {
+                                const el = e.currentTarget
+                                if (
+                                    el.scrollTop + el.clientHeight >= el.scrollHeight - 20 &&
+                                    hasMore &&
+                                    !isLoadingMore &&
+                                    !isLoading
+                                ) {
+                                    setSkip(prev => prev + TAKE)
+                                }
+                            }}>
                                 <table className="min-w-full divide-y divide-gray-200 table-fixed">
                                     <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
                                         <tr>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider w-1/4">
-                                                Part Number
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider w-auto">
-                                                Description
-                                            </th>
-                                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider w-20">
-                                                UOM
-                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider w-1/4">Part Number</th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider w-auto">Description</th>
+                                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider w-20">IUM</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
-                                        {filteredParts.length > 0 ? (
-                                            filteredParts.map((part) => (
+                                        {partList.length > 0 ? (
+                                            partList.map((part) => (
                                                 <tr
                                                     key={part.Part_PartNum}
                                                     onClick={() => handleSelectPart(part)}
                                                     className="hover:bg-blue-50 cursor-pointer transition-colors"
                                                 >
-                                                    {/* PART NUMBER: Hapus whitespace-nowrap, tambah break-words */}
-                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900 align-top wrap-break-words">
-                                                        {part.Part_PartNum}
-                                                    </td>
-
-                                                    {/* DESCRIPTION: Hapus whitespace-nowrap, tambah break-words */}
-                                                    <td className="px-4 py-3 text-sm text-gray-500 align-top wrap-break-words">
-                                                        {part.Part_PartDescription}
-                                                    </td>
-
-                                                    {/* UOM: Tetap satu baris */}
+                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900 align-top wrap-break-words">{part.Part_PartNum}</td>
+                                                    <td className="px-4 py-3 text-sm text-gray-500 align-top wrap-break-words">{part.Part_PartDescription}</td>
                                                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center align-top">
                                                         <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
                                                             {part.Part_IUM}
@@ -238,6 +236,16 @@ export default function AddManualLineModal({ open, onClose, onAdd, nextLineNum, 
                                             </tr>
                                         )}
                                     </tbody>
+                                    {isLoadingMore && (
+                                        <tfoot>
+                                            <tr>
+                                                <td colSpan={3} className="py-3 text-center text-xs text-gray-400 bg-gray-50">
+                                                    <ArrowPathIcon className="inline h-4 w-4 animate-spin mr-2" />
+                                                    Memuat data lainnya...
+                                                </td>
+                                            </tr>
+                                        </tfoot>
+                                    )}
                                 </table>
                             </div>
                         )}
