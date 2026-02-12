@@ -9,6 +9,8 @@ import { getPartIum } from '@/api/sjplant/ium'
 import { getPartWarehouseList } from '@/api/sjplant/whse'
 import { getPartBinList } from '@/api/sjplant/bin'
 import { deleteLineWithLogs } from '@/api/sjplant/deleteline'
+import { getDescbyPartNum } from '@/api/sjplant/part'
+import { checkGuidExists } from "@/api/sjplant/checkguid"
 
 const generateGuid = () => {
   if (crypto?.randomUUID) return crypto.randomUUID()
@@ -44,15 +46,79 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, s
       return;
     }
 
-    // FORMAT: PART#DESC#LOT#QTY#GUID#TIMESTAMP
-    const parts = rawValue.split('#')
+    let partNum = ''
+    let partDesc = ''
+    let lotNum = ''
+    let qty = 0
+    let guid = ''
+    let timestamp = ''
 
-    const partNum = parts[0] || ''
-    const partDesc = parts[1] || ''
-    const lotNum = parts[2] || ''
-    const qty = Number(parts[3]) || 0
-    const guid = parts[4] || generateGuid()
-    const timestamp = parts[5] || new Date().toISOString()
+    // CEK FORMAT QR CODE
+    if (rawValue.includes('|')) {
+      // FORMAT BARU: PART|1201362|QTY_PACK|LOT|RUNNING_NUMBER|TIMESTAMP
+      const parts = rawValue.split('|')
+
+      partNum = parts[0] || ''
+      qty = Number(parts[2]) || 0
+      lotNum = parts[3] || ''
+      guid = parts[4] || generateGuid()
+      timestamp = parts[5] || new Date().toISOString()
+
+      try {
+        const resDesc = await getDescbyPartNum(partNum)
+
+        if (resDesc.success && resDesc.data?.length) {
+          partDesc = resDesc.data[0].Part_PartDescription || ''
+        }
+      } catch {
+        partDesc = ''
+      }
+    } else {
+      // FORMAT LAMA: PART#DESC#LOT#QTY#GUID#TIMESTAMP
+      const parts = rawValue.split('#')
+
+      partNum = parts[0] || ''
+      partDesc = parts[1] || ''
+      lotNum = parts[2] || ''
+      qty = Number(parts[3]) || 0
+      guid = parts[4] || generateGuid()
+      timestamp = parts[5] || new Date().toISOString()
+    }
+
+    // CEK DUPLIKASI GUID KE DATABASE
+    try {
+      const resGuid = await checkGuidExists(guid)
+
+      if (!resGuid.success) {
+        alert("Gagal validasi GUID ke server")
+        return
+      }
+
+      if (resGuid.exists) {
+        const existing = resGuid.data?.[0]
+
+        // FORMAT (#)
+        if (rawValue.includes('#')) {
+          alert("QR Code sudah pernah discan sebelumnya!")
+          return
+        }
+
+        // FORMAT (|)
+        if (rawValue.includes('|')) {
+
+          const dbTimestamp = existing?.UD100A_ShortChar03
+
+          if (dbTimestamp === timestamp) {
+            alert("QR Code dengan timestamp yang sama sudah ada!")
+            return
+          }
+        }
+      }
+
+    } catch (err) {
+      alert("Terjadi kesalahan saat cek GUID")
+      return
+    }
 
     // FETCH IUM
     let uom = 'ERR'
@@ -227,7 +293,7 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, s
 
       <ScanInput onScan={handleProcessScan} disabled={isLocked} />
 
-      <SJLineTable lines={lines} setLines={setLines} onDeleteLine={handleDeleteLine} isLocked={isLocked} shipFrom={shipFrom}/>
+      <SJLineTable lines={lines} setLines={setLines} onDeleteLine={handleDeleteLine} isLocked={isLocked} shipFrom={shipFrom} />
 
       <ScanResultTable items={scanLogs} />
     </div>

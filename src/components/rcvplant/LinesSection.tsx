@@ -21,14 +21,33 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, i
       return
     }
 
-    // FORMAT: PART#DESC#LOT#QTY#GUID#TIMESTAMP
-    const parts = rawValue.split('#')
+    let partNum = ''
+    let partDesc = ''
+    let lotNum = ''
+    let qtyInput = 0
+    let guid = ''
+    let timestamp = ''
 
-    const partNum = parts[0]
-    const partDesc = parts[1]
-    const lotNum = parts[2]
-    const qtyInput = Number(parts[3]) || 0
-    const guid = parts[4]
+    if (rawValue.includes('|')) {
+      // FORMAT BARU: PART|XXX|QTY|LOT|GUID|TIMESTAMP
+      const parts = rawValue.split('|')
+
+      partNum = parts[0] || ''
+      qtyInput = Number(parts[2]) || 0
+      lotNum = parts[3] || ''
+      guid = parts[4] || ''
+      timestamp = parts[5] || ''
+    } else {
+      // FORMAT LAMA: PART#DESC#LOT#QTY#GUID#TIMESTAMP
+      const parts = rawValue.split('#')
+
+      partNum = parts[0] || ''
+      partDesc = parts[1] || ''
+      lotNum = parts[2] || ''
+      qtyInput = Number(parts[3]) || 0
+      guid = parts[4] || ''
+      timestamp = parts[5] || ''
+    }
 
     if (!guid) {
       alert("GUID tidak ditemukan di QR")
@@ -38,8 +57,8 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, i
     const lineIndex = lines.findIndex(l => l.partNum === partNum && l.lotNum === lotNum);
 
     if (lineIndex === -1) {
-        alert(`Part Number ${partNum} dengan Lot ${lotNum} tidak ditemukan di daftar Line!`);
-        return;
+      alert(`Part Number ${partNum} dengan Lot ${lotNum} tidak ditemukan di daftar Line!`);
+      return;
     }
 
     // CEK GUID KE DB
@@ -69,31 +88,31 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, i
       return;
     }
     setLines(prevLines => {
-        return prevLines.map((line, idx) => {
-            if (idx === lineIndex) {
-                const currentPcs = line.qtyHitungPcs || 0;
-                const currentPack = line.qtyPack || 1; 
+      return prevLines.map((line, idx) => {
+        if (idx === lineIndex) {
+          const currentPcs = line.qtyHitungPcs || 0;
+          const currentPack = line.qtyPack || 1;
 
-                let newPack = currentPack;
-                let newPcs = currentPcs;
+          let newPack = currentPack;
+          let newPcs = currentPcs;
 
-                if (currentPcs === 0) {
-                    newPcs = qtyInput;
-                    
-                    if (newPack === 0) newPack = 1; 
-                } else {
-                    newPack = currentPack + 1;
-                    newPcs = currentPcs + qtyInput;
-                }
+          if (currentPcs === 0) {
+            newPcs = qtyInput;
 
-                return {
-                    ...line,
-                    qtyPack: newPack,
-                    qtyHitungPcs: newPcs
-                };
-            }
-            return line;
-        });
+            if (newPack === 0) newPack = 1;
+          } else {
+            newPack = currentPack + 1;
+            newPcs = currentPcs + qtyInput;
+          }
+
+          return {
+            ...line,
+            qtyPack: newPack,
+            qtyHitungPcs: newPcs
+          };
+        }
+        return line;
+      });
     });
   }
 

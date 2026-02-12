@@ -150,7 +150,7 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked, s
                     <tbody className="bg-white divide-y divide-gray-200">
                         {lines.length === 0 ? (
                             <tr>
-                                <td colSpan={8} className="text-center py-6 text-gray-400 text-sm italic bg-gray-50">
+                                <td colSpan={9} className="text-center py-6 text-gray-400 text-sm italic bg-gray-50">
                                     Belum ada data.
                                 </td>
                             </tr>
@@ -260,7 +260,7 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked, s
                                     <td className="px-2 py-2">
                                         <input
                                             type="number"
-                                            value={line.qty}
+                                            value={line.qty ?? 0}
                                             disabled={isLocked}
                                             onFocus={(e) => e.target.select()}
                                             onChange={(e) => updateLineState(line.lineNum, 'qty', parseFloat(e.target.value) || 0)}
@@ -271,7 +271,7 @@ export default function SJLineTable({ lines, setLines, onDeleteLine, isLocked, s
                                     <td className="px-2 py-2">
                                         <input
                                             type="number"
-                                            value={line.qtyPack}
+                                            value={line.qtyPack ?? 0}
                                             disabled={isLocked}
                                             onFocus={(e) => e.target.select()}
                                             onChange={(e) => updateLineState(line.lineNum, 'qtyPack', parseFloat(e.target.value) || 0)}

@@ -11,14 +11,13 @@ import { getPlantsList, ApiShip } from '@/api/sjplant/ship'
 import { saveHeaderToUD100 } from '@/api/sjplant/addheader'
 import { getHeaderById } from '@/api/sjplant/getbyid'
 import { updateHeaderToUD100 } from '@/api/sjplant/updateheader'
-import { addLinesToUD100, ParentKeys } from '@/api/sjplant/addlines';
-import { updateLineToUD100A } from '@/api/sjplant/updateline';
-import { checkGuidExists } from "@/api/sjplant/checkguid";
-import { InvShip } from "@/api/sjplant/invship";
+import { addLinesToUD100, ParentKeys } from '@/api/sjplant/addlines'
+import { updateLineToUD100A } from '@/api/sjplant/updateline'
+import { InvShip } from "@/api/sjplant/invship"
 import { RetInvShip } from '@/api/sjplant/retinvship'
-import { pdf } from "@react-pdf/renderer";
-import SuratJalanPDF from "@/components/pdf/sjplant/SJAntarPlant";
-import { getShipToAddress } from "@/constants/sjAddress";
+import { pdf } from "@react-pdf/renderer"
+import SuratJalanPDF from "@/components/pdf/sjplant/SJAntarPlant"
+import { getShipToAddress } from "@/constants/sjAddress"
 import QRCode from "qrcode";
 
 function EntryContent() {
@@ -324,27 +323,6 @@ function EntryContent() {
                     const relevantLogs = logs.filter(
                         log => log.isNew && newLines.some(nl => nl.lineNum === log.lineNum)
                     );
-
-                    // Kumpulin semua GUID baru
-                    const newGuids = logs
-                        .filter(l => l.isNew && l.guid)
-                        .map(l => l.guid);
-
-                    // Cek satu-satu 
-                    for (const guid of newGuids) {
-                        const check = await checkGuidExists(guid);
-
-                        if (!check.success) {
-                            alert("Gagal validasi GUID");
-                            return;
-                        }
-
-                        if (check.exists) {
-                            alert(`QR Code dengan GUID ${guid} sudah pernah discan!`);
-                            await fetchHeaderData();
-                            return; // STOP TOTAL
-                        }
-                    }
 
                     const resAddLines = await addLinesToUD100(currentParentKeys, newLines, relevantLogs);
                     if (!resAddLines.success) {
