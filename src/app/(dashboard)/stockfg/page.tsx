@@ -24,12 +24,14 @@ const getCurrentPeriod = () => {
 export default function StockFGPage() {
     const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
     const [selectedPeriod, setSelectedPeriod] = useState<string>(getCurrentPeriod());
+    const [selectedPartNum, setSelectedPartNum] = useState<string>('');
     const [isLoading, setIsLoading] = useState(false);
 
     const handleWarehouseChange = async (uiValue: string) => {
         // Jika user memilih "Pilih Gudang" (value kosong), reset state
         if (!uiValue) {
             setSelectedWarehouse('');
+            setSelectedPartNum('');
             return;
         }
 
@@ -49,6 +51,7 @@ export default function StockFGPage() {
 
             if (result.success) {
                 setSelectedWarehouse(uiValue);
+                setSelectedPartNum('');
             } else {
                 alert(`Gagal: ${result.message}`);
             }
@@ -67,7 +70,10 @@ export default function StockFGPage() {
                 selectedWarehouse={selectedWarehouse}
                 onWarehouseChange={handleWarehouseChange}
                 selectedPeriod={selectedPeriod}
-                onPeriodChange={setSelectedPeriod}
+                onPeriodChange={(val) => {
+                    setSelectedPeriod(val);
+                    setSelectedPartNum(''); // Reset selection saat ganti periode
+                }}
                 isLoading={isLoading}
             />
 
@@ -77,13 +83,21 @@ export default function StockFGPage() {
                     <StockTable
                         warehouse={selectedWarehouse}
                         period={selectedPeriod}
+                        selectedPartNum={selectedPartNum}
+                        onSelectPart={setSelectedPartNum}
                     />
 
                     {/* Component 3: Tabel Incoming */}
-                    <IncomingTable warehouse={selectedWarehouse} />
+                    <IncomingTable
+                        period={selectedPeriod}
+                        partNum={selectedPartNum}
+                    />
 
                     {/* Component 4: Tabel Outgoing */}
-                    <OutgoingTable warehouse={selectedWarehouse} />
+                    <OutgoingTable
+                        period={selectedPeriod}
+                        partNum={selectedPartNum} 
+                    />
                 </div>
             ) : (
                 // Tampilan Placeholder jika belum pilih gudang
