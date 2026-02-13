@@ -77,7 +77,7 @@ export async function saveToUD14(items: SavePartItem[]) {
 
   // Kirim ke API Epicor
   try {
-    const response = await apiFetch(`/v1/Ice.BO.UD14Svc/Update`, {
+    const response = await apiFetch(`/v2/Ice.BO.UD14Svc/Update`, {
       method: "POST",
       authHeader,
       requireLicense: true,

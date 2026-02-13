@@ -33,7 +33,7 @@ export async function deleteLineWithLogs(
         };
 
         const res = await apiFetch(
-            `/v1/Ice.BO.UD100Svc/Update`,
+            `/v2/Ice.BO.UD100Svc/Update`,
             {
                 method: "POST",
                 authHeader,

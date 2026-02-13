@@ -116,8 +116,7 @@ export async function deleteQRItem(
     };
 
     // 4. Panggil Endpoint DeleteByID
-    // Penting: Method biasanya POST untuk RPC call di Epicor REST v1
-    const response = await apiFetch(`/v1/Ice.BO.UD14Svc/DeleteByID`, {
+    const response = await apiFetch(`/v2/Ice.BO.UD14Svc/DeleteByID`, {
       method: "POST",
       authHeader,
       requireLicense: true,
