@@ -8,6 +8,7 @@ type ApiPart = {
     Part_PartDescription: string;
     Part_ClassID: string;
     Part_IUM: string;
+    Part_standartpack_c: number;
     RowIdent: string;
 };
 

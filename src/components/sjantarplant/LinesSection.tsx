@@ -66,15 +66,6 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, s
       guid = parts[4] || generateGuid()
       timestamp = parts[5] || new Date().toISOString()
 
-      try {
-        const resDesc = await getDescbyPartNum(partNum)
-
-        if (resDesc.success && resDesc.data?.length) {
-          partDesc = resDesc.data[0].Part_PartDescription || ''
-        }
-      } catch {
-        partDesc = ''
-      }
     } else {
       // FORMAT LAMA: PART#DESC#LOT#QTY#GUID#TIMESTAMP
       const parts = rawValue.split('#')
@@ -87,6 +78,31 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, s
       timestamp = parts[5] || new Date().toISOString()
     }
 
+    let stdPack = 0;
+
+    if (partNum) {
+      try {
+        // Panggil API (berlaku untuk kedua format QR)
+        const resDesc = await getDescbyPartNum(partNum)
+
+        if (resDesc.success && resDesc.data?.length) {
+          const partData = resDesc.data[0];
+
+          // Ambil Desc dari API jika ada, override desc dari QR lama
+          if (partData.Part_PartDescription) {
+            partDesc = partData.Part_PartDescription;
+          }
+
+          // AMBIL STANDARD PACK (LANGSUNG)
+          if (partData.Part_standartpack_c) {
+            stdPack = partData.Part_standartpack_c;
+          }
+        }
+      } catch (err) {
+        console.error("Gagal ambil detail part", err);
+      }
+    }
+
     // CEK DUPLIKASI GUID KE DATABASE
     try {
       const resGuid = await checkGuidExists(guid)
@@ -97,7 +113,7 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, s
       }
 
       if (resGuid.exists && resGuid.data && resGuid.data.length > 0) {
-        
+
         if (isPipeFormat) {
           const isExactDuplicate = resGuid.data.some((row: { UD100A_ShortChar03?: string }) => {
             const dbTime = String(row.UD100A_ShortChar03 || '').trim()
@@ -111,7 +127,7 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, s
           }
         } else {
           alert("QR Code sudah pernah discan sebelumnya!")
-          return; 
+          return;
         }
       }
     } catch (err) {
@@ -227,7 +243,7 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, s
       partDesc,
       lotNum,
       qty,
-      qtyPack: 0,
+      qtyPack: stdPack,
       uom,
       warehouseCode: defaultWh,
       binNum: defaultBin,
