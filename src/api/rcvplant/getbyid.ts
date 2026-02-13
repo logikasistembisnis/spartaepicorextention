@@ -38,7 +38,7 @@ export async function getHeaderById(packNum: string): Promise<GetHeaderResult> {
       key5: "SJPlant",
     });
 
-    const queryUrl = `/v1/Ice.BO.UD100Svc/GetByID?${queryParams.toString()}`;
+    const queryUrl = `/v2/Ice.BO.UD100Svc/GetByID?${queryParams.toString()}`;
 
     const response = await apiFetch(queryUrl, {
       method: "GET",

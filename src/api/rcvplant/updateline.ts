@@ -34,7 +34,7 @@ export async function updateLineToUD100A(
         };
 
         // --- 3. CALL API ---
-        const endpoint = `/v1/Ice.BO.UD100Svc/Update`;
+        const endpoint = `/v2/Ice.BO.UD100Svc/Update`;
         const response = await apiFetch(endpoint, {
             method: "POST",
             authHeader,

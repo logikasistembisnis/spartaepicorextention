@@ -47,7 +47,7 @@ export async function getPartBinList(
         };
 
         const response = await apiFetch(
-            `/v1/Erp.BO.PartBinSearchSvc/GetPartBinSearch`,
+            `/v2/Erp.BO.PartBinSearchSvc/GetPartBinSearch`,
             {
                 method: "POST",
                 authHeader,

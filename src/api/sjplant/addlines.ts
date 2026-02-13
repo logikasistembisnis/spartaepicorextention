@@ -111,7 +111,7 @@ export async function addLinesToUD100(
       },
     };
 
-    const endpoint = `/v1/Ice.BO.UD100Svc/Update`;
+    const endpoint = `/v2/Ice.BO.UD100Svc/Update`;
     const response = await apiFetch(endpoint, {
       method: "POST",
       authHeader,

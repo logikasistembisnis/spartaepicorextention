@@ -39,7 +39,7 @@ export async function getPartLotList(partNum: string): Promise<ApiResponse> {
         });
 
         const response = await apiFetch(
-            `/v1/Erp.BO.LotSelectUpdateSvc/GetList?${params.toString()}`,
+            `/v2/Erp.BO.LotSelectUpdateSvc/GetList?${params.toString()}`,
             {
                 method: "GET", // Method GET
                 authHeader,

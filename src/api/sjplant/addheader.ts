@@ -119,7 +119,7 @@ export async function saveHeaderToUD100(header: SjPlantHeader) {
         RowMod: "A",
       };
 
-      const response = await apiFetch(`/v1/Ice.BO.UD100Svc/Update`, {
+      const response = await apiFetch(`/v2/Ice.BO.UD100Svc/Update`, {
         method: "POST",
         authHeader,
         requireLicense: true,
