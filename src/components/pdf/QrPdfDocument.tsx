@@ -5,7 +5,7 @@ import logoImage from '../../../public/assets/logo.png';
 export type QrPdfItem = {
     partNumber: string;
     description: string;
-    qtyPack: number;
+    qtyBox: number;
     sysRowId: string;
     qrImageSrc: string;
     lotNumber?: string;
@@ -234,7 +234,7 @@ export const QrPdfDocument = ({ items }: { items: QrPdfItem[] }) => {
                                 </View>
                                 <View style={styles.stdRow}>
                                     <View style={styles.labelCol}><Text style={styles.labelText}>JUMLAH</Text></View>
-                                    <View style={styles.valueCol}><Text style={styles.valueText}>{item.qtyPack} PCS</Text></View>
+                                    <View style={styles.valueCol}><Text style={styles.valueText}>{item.qtyBox} PCS</Text></View>
                                 </View>
                                 <View style={styles.stdRow}>
                                     <View style={styles.labelCol}><Text style={styles.labelText}>TGL / SHIFT</Text></View>

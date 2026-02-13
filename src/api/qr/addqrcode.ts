@@ -10,8 +10,6 @@ type SavePartItem = {
   qtyBox: number;
   qtyCetak: number;
   lotNumber: string;
-  qtyPack: number;
-  totalBox: number;
   custID: string;
   custName: string;
 };
@@ -69,8 +67,6 @@ export async function saveToUD14(items: SavePartItem[]) {
       ShortChar02: item.lotNumber, // Simpan Lot Number
       Number02: item.qtyCetak, // Simpan Qty Cetak
       Date01: todayDate,
-      Number03: item.qtyPack,
-      Number04: item.totalBox,
       ShortChar03: item.custID,
       ShortChar04: item.custName,
       RowMod: "A",

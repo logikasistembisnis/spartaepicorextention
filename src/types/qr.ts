@@ -10,8 +10,6 @@ export type PartItem = {
     lotNumber: string
     qtyBox: number
     qtyCetak: number
-    qtyPack: number
-    totalBox: number
 }
 
 export type SelectionData = {

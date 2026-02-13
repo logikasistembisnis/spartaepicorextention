@@ -13,10 +13,8 @@ export type NewPartItem = {
     lotNumber: string
     qtyBox: number
     qtyCetak: number
-    totalBox: number
-    qtyPack: number
     custID: string
-    custName: string 
+    custName: string
 }
 
 type ApiPart = {
@@ -130,9 +128,15 @@ export default function AddNew({ customer, onCloseAction, onSaveAction }: AddNew
     const handleCheckboxChange = async (partNum: string, checked: boolean) => {
         if (checked) {
             // 1. Set default state dulu
+            const part = partsData.find(p => p.Part_PartNum === partNum)
+
             setTempSelections(prev => ({
                 ...prev,
-                [partNum]: { qtyBox: "", qtyCetak: "", selectedLot: "" } // Default Qty Cetak 1
+                [partNum]: {
+                    qtyBox: part?.Part_standartpack_c?.toString() || "",
+                    qtyCetak: "",
+                    selectedLot: ""
+                }
             }))
 
             // 2. Cek apakah Lot untuk part ini sudah ada di cache?
@@ -213,8 +217,6 @@ export default function AddNew({ customer, onCloseAction, onSaveAction }: AddNew
                 const data = tempSelections[pNum]
                 const qtyVal = parseInt(data.qtyBox)
                 const qtyCetakVal = parseInt(data.qtyCetak)
-                const qtyPack = part.Part_standartpack_c || 0
-                const totalBox = qtyPack === 0 ? 0 : (qtyVal / qtyPack)
 
                 // Validasi: Qty harus angka, Lot tidak boleh kosong
                 if (!data.selectedLot || isNaN(qtyVal) || qtyVal <= 0 || isNaN(qtyCetakVal) || qtyCetakVal <= 0) {
@@ -226,8 +228,6 @@ export default function AddNew({ customer, onCloseAction, onSaveAction }: AddNew
                         lotNumber: data.selectedLot,
                         qtyBox: qtyVal,
                         qtyCetak: qtyCetakVal,
-                        qtyPack: qtyPack,
-                        totalBox: totalBox,
                         custID: customer.custID,
                         custName: customer.custName,
                     })
@@ -350,10 +350,8 @@ export default function AddNew({ customer, onCloseAction, onSaveAction }: AddNew
                                     <th className="px-3 py-3 text-left w-20 text-xs font-semibold text-gray-900 uppercase">Part Number</th>
                                     <th className="px-3 py-3 text-left w-20 text-xs font-semibold text-gray-900 uppercase">Part Description</th>
                                     <th className="px-3 py-3 text-center w-20 text-xs font-semibold text-gray-900 uppercase">Lot Number</th>
-                                    <th className="px-3 py-3 text-center w-16 text-xs font-semibold text-gray-900 uppercase">Qty Pack</th>
                                     <th className="px-3 py-3 text-center w-16 text-xs font-semibold text-gray-900 uppercase">Qty Box</th>
                                     <th className="px-3 py-3 text-center w-16 text-xs font-semibold text-gray-900 uppercase">Qty Cetak</th>
-                                    <th className="px-3 py-3 text-center w-16 text-xs font-semibold text-gray-900 uppercase">Total Box</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -430,12 +428,6 @@ export default function AddNew({ customer, onCloseAction, onSaveAction }: AddNew
                                                     )}
                                                 </td>
 
-                                                <td className="px-3 py-2 text-center align-middle">
-                                                    <span className="text-xs text-gray-700 font-medium">
-                                                        {part.Part_standartpack_c || 0}
-                                                    </span>
-                                                </td>
-
                                                 {/* Qty Box */}
                                                 <td className="px-3 py-2 align-middle">
                                                     <input type="number" min="1" placeholder="0"
@@ -454,21 +446,6 @@ export default function AddNew({ customer, onCloseAction, onSaveAction }: AddNew
                                                         value={selectionData.qtyCetak}
                                                         onChange={(e) => handleInputChange(pNum, 'qtyCetak', e.target.value)}
                                                     />
-                                                </td>
-
-                                                {/* Total Box */}
-                                                <td className="px-3 py-2 text-center align-middle">
-                                                    <span className="text-xs font-semibold text-gray-700">
-                                                        {(() => {
-                                                            const qtyBox = parseFloat(selectionData.qtyBox)
-                                                            const qtyPack = part.Part_standartpack_c || 0
-
-                                                            if (!isChecked || isNaN(qtyBox)) return "-"
-                                                            if (qtyPack === 0) return "0"
-
-                                                            return Math.ceil(qtyBox / qtyPack)
-                                                        })()}
-                                                    </span>
                                                 </td>
                                             </tr>
                                         )

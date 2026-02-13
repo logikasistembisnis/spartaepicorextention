@@ -18,8 +18,6 @@ type PartItem = {
     lotNumber: string
     qtyBox: number
     qtyCetak: number
-    qtyPack: number
-    totalBox: number
     key5: string
     sysRowId: string
     sysRevId: number
@@ -78,8 +76,6 @@ export default function QrGeneration() {
     const [newQty, setNewQty] = useState<number>(0)
     const [newQtyCetak, setNewQtyCetak] = useState<number>(0)
     const [isSavingEdit, setIsSavingEdit] = useState(false)
-    const [newQtyPack, setNewQtyPack] = useState<number>(0)
-    const [newTotalBox, setNewTotalBox] = useState<number>(0)
 
     const fetchQRData = useCallback(async () => {
         setLoading(true)
@@ -96,8 +92,6 @@ export default function QrGeneration() {
                         fixedDate = item.UD14_Date01.split('T')[0];
                     }
 
-                    const rawTotalBox = item.UD14_Number04 || 0;
-
                     return {
                         company: item.UD14_Company,
                         id: item.UD14_Key1,
@@ -106,8 +100,6 @@ export default function QrGeneration() {
                         lotNumber: item.UD14_ShortChar02,
                         qtyBox: item.UD14_Number01 || 0,
                         qtyCetak: item.UD14_Number02 || 0,
-                        qtyPack: item.UD14_Number03 || 0,
-                        totalBox: Math.ceil(rawTotalBox),
                         key5: item.UD14_Key5,
                         sysRowId: item.UD14_SysRowID,
                         sysRevId: item.UD14_SysRevID,
@@ -208,8 +200,6 @@ export default function QrGeneration() {
                         Character01: item.description,
                         Number01: item.qtyBox,
                         Number02: item.qtyCetak,
-                        Number03: item.qtyPack,
-                        Number04: item.totalBox,
                         ShortChar20: item.entryPerson,
                         Date01: item.entryDate
                     });
@@ -224,7 +214,7 @@ export default function QrGeneration() {
 
                             if (item.custID === 'C00010') {
                                 const runningNumber = (index + 1).toString().padStart(8, '0');
-                                rawData = `${item.partNumber}|1201362|${item.qtyPack}|${item.lotNumber}|${runningNumber}|${item.timePrint ? item.timePrint : timestamp}`;
+                                rawData = `${item.partNumber}|1201362|${item.qtyBox}|${item.lotNumber}|${runningNumber}|${item.timePrint ? item.timePrint : timestamp}`;
                             } else {
                                 rawData = `${item.partNumber}#${item.description}#${item.lotNumber}#${item.qtyBox}#${uniqueQRId}#${item.timePrint ? item.timePrint : timestamp}`;
                             }
@@ -241,7 +231,7 @@ export default function QrGeneration() {
                                 partNumber: item.partNumber,
                                 description: item.description,
                                 lotNumber: item.lotNumber,
-                                qtyPack: item.qtyPack,
+                                qtyBox: item.qtyBox,
                                 qtyCetak: item.qtyCetak,
                                 sysRowId: uniqueQRId,
                                 qrImageSrc: qrBase64,
@@ -284,18 +274,8 @@ export default function QrGeneration() {
         setEditingItem(item);
         setNewQty(item.qtyBox);
         setNewQtyCetak(item.qtyCetak);
-        setNewQtyPack(item.qtyPack);
-        setNewTotalBox(item.totalBox);
         setIsEditModalOpen(true);
     };
-
-    useEffect(() => {
-        if (newQtyPack > 0) {
-            setNewTotalBox(Math.ceil(newQty / newQtyPack))
-        } else {
-            setNewTotalBox(0)
-        }
-    }, [newQty, newQtyPack])
 
     const handleSaveEdit = async () => {
         if (!editingItem) return;
@@ -316,8 +296,6 @@ export default function QrGeneration() {
                 ShortChar01: editingItem.timePrint,
                 ShortChar03: editingItem.custID,
                 ShortChar04: editingItem.custName,
-                Number03: newQtyPack,
-                Number04: newTotalBox,
                 Number02: newQtyCetak,
                 Date01: editingItem.entryDate
             }];
@@ -447,10 +425,8 @@ export default function QrGeneration() {
                                 <th className="px-4 md:px-6 py-2 md:py-4 min-w-40 text-left text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Customer ID</th>
                                 <th className="px-4 md:px-6 py-2 md:py-4 min-w-55 text-left text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Customer Name</th>
                                 <th className="px-4 md:px-6 py-2 md:py-4 min-w-40 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Lot Number</th>
-                                <th className="px-4 md:px-6 py-2 md:py-4 min-w-30 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Qty Pack</th>
                                 <th className="px-4 md:px-6 py-2 md:py-4 min-w-30 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Qty Box</th>
                                 <th className="px-4 md:px-6 py-2 md:py-4 min-w-30 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Qty Cetak</th>
-                                <th className="px-4 md:px-6 py-2 md:py-4 min-w-30 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Total Box</th>
                                 <th className="px-4 md:px-6 py-2 md:py-4 min-w-30 text-center text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Action</th>
                             </tr>
                         </thead>
@@ -488,10 +464,8 @@ export default function QrGeneration() {
                                                 <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900">{item.custID}</td>
                                                 <td className="px-4 md:px-6 py-2 text-xs md:text-sm text-gray-900 whitespace-normal">{item.custName}</td>
                                                 <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900 text-center">{item.lotNumber}</td>
-                                                <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900 text-center">{item.qtyPack}</td>
                                                 <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900 text-center">{item.qtyBox}</td>
                                                 <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900 text-center">{item.qtyCetak}</td>
-                                                <td className="px-4 md:px-6 py-2 whitespace-nowrap text-xs md:text-sm text-gray-900 text-center">{item.totalBox}</td>
                                                 <td className="px-4 md:px-6 py-2 whitespace-nowrap text-center">
                                                     <div className="flex items-center justify-center gap-2">
                                                         <button
@@ -546,8 +520,6 @@ export default function QrGeneration() {
                 setNewQtyAction={setNewQty}
                 currentQtyCetak={newQtyCetak}
                 setNewQtyCetakAction={setNewQtyCetak}
-                qtyPack={newQtyPack}
-                totalBox={newTotalBox}
                 isSaving={isSavingEdit}
                 isPrinted={!!editingItem?.timePrint}
             />

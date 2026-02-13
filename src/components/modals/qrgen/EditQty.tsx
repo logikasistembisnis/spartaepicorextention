@@ -12,8 +12,6 @@ type EditQtyProps = {
     setNewQtyAction: (val: number) => void
     currentQtyCetak: number
     setNewQtyCetakAction: (val: number) => void
-    qtyPack: number
-    totalBox: number
     isSaving: boolean
     isPrinted: boolean
 }
@@ -27,8 +25,6 @@ export default function EditQty({
     setNewQtyAction,
     currentQtyCetak,
     setNewQtyCetakAction,
-    qtyPack,
-    totalBox,
     isSaving,
     isPrinted
 }: EditQtyProps) {
@@ -69,34 +65,7 @@ export default function EditQty({
                         />
                     </div>
 
-                    {/* Row 1 : Qty Pack | Total Box */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
-                                Qty Pack
-                            </label>
-                            <input
-                                type="number"
-                                value={qtyPack}
-                                disabled
-                                className="w-full px-4 py-2 rounded-lg bg-gray-100 text-gray-500 border border-gray-200 text-sm md:text-base cursor-not-allowed"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
-                                Total Box
-                            </label>
-                            <input
-                                type="number"
-                                value={totalBox}
-                                disabled
-                                className="w-full px-4 py-2 rounded-lg bg-gray-100 text-gray-700 border border-gray-200 text-sm md:text-base font-semibold cursor-not-allowed"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Row 2 : Qty Box | Qty Cetak */}
+                    {/* Qty Box | Qty Cetak */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
