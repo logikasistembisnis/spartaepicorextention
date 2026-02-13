@@ -52,10 +52,12 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, s
     let qty = 0
     let guid = ''
     let timestamp = ''
+    let isPipeFormat = false
 
     // CEK FORMAT QR CODE
     if (rawValue.includes('|')) {
       // FORMAT BARU: PART|1201362|QTY_PACK|LOT|RUNNING_NUMBER|TIMESTAMP
+      isPipeFormat = true
       const parts = rawValue.split('|')
 
       partNum = parts[0] || ''
@@ -94,27 +96,24 @@ export default function LinesSection({ lines, setLines, scanLogs, setScanLogs, s
         return
       }
 
-      if (resGuid.exists) {
-        const existing = resGuid.data?.[0]
+      if (resGuid.exists && resGuid.data && resGuid.data.length > 0) {
+        
+        if (isPipeFormat) {
+          const isExactDuplicate = resGuid.data.some((row: { UD100A_ShortChar03?: string }) => {
+            const dbTime = String(row.UD100A_ShortChar03 || '').trim()
+            const scanTime = String(timestamp).trim()
+            return dbTime === scanTime
+          })
 
-        // FORMAT (#)
-        if (rawValue.includes('#')) {
-          alert("QR Code sudah pernah discan sebelumnya!")
-          return
-        }
-
-        // FORMAT (|)
-        if (rawValue.includes('|')) {
-
-          const dbTimestamp = existing?.UD100A_ShortChar03
-
-          if (dbTimestamp === timestamp) {
-            alert("QR Code dengan timestamp yang sama sudah ada!")
-            return
+          if (isExactDuplicate) {
+            alert(`Double Scan! QR Code ini sudah tersimpan di server.\nGUID: ${guid}\nTime: ${timestamp}`)
+            return;
           }
+        } else {
+          alert("QR Code sudah pernah discan sebelumnya!")
+          return; 
         }
       }
-
     } catch (err) {
       alert("Terjadi kesalahan saat cek GUID")
       return

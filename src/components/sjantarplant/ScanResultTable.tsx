@@ -34,7 +34,7 @@ export default function ScanResultTable({ items }: ScanResultTableProps) {
                             </tr>
                         ) : (
                             items.map((item, index) => (
-                                <tr key={`${item.guid}-${item.timestamp}`} className="hover:bg-blue-50 transition-colors">
+                                <tr key={`${item.guid}-${index}`} className="hover:bg-blue-50 transition-colors">
                                     <td className="px-3 py-2 text-xs text-gray-500">{items.length - index}</td>
 
                                     {/* Scan QR */}
