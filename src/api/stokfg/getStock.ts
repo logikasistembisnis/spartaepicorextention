@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { apiFetch } from "@/api/apiFetch";
 
-// Definisikan Tipe Data sesuai Response JSON Epicor
+// Definisikan Tipe Data
 export type StockItem = {
     Calculated_PartNum: string;
     Part_PartDescription: string;
@@ -18,44 +18,73 @@ export type StockItem = {
     Calculated_WHPivot: string;
 };
 
-type StockResponse = {
+type ODataResponse = {
+    "@odata.context"?: string;
     value: StockItem[];
 };
 
-export async function getStockData(periode: string) {
+type ApiResponse = {
+    success: boolean;
+    data?: StockItem[];
+    error?: string;
+};
+
+export async function getStockData(
+    periode: string,
+    searchTerm = "",
+    skip = 0,
+    take = 50
+): Promise<ApiResponse> {
     const cookieStore = await cookies();
     const authHeader = cookieStore.get("session_auth")?.value;
 
     if (!authHeader) {
-        return { success: false, message: "Unauthorized: No session" };
+        return { success: false, error: "Unauthorized: No session" };
     }
 
-    try {
-        const res = await apiFetch(
-            `/v2/odata/166075/BaqSvc/UDNOV_FGHierarki03_1/Data?SelectedPeriode=${periode}`,
-            {
-                method: "GET",
-                authHeader,
-                requireLicense: true,
-                apiMode: "epicor",
-                cache: "no-store",
-            }
+    const filterParts: string[] = [];
+
+    if (searchTerm) {
+        const safeSearch = searchTerm.replace(/'/g, "''");
+        filterParts.push(
+            `(contains(Calculated_PartNum,'${safeSearch}') or contains(Part_PartDescription,'${safeSearch}'))`
         );
+    }
+
+    const filterQuery =
+        filterParts.length > 0 ? `&$filter=${filterParts.join(" and ")}` : "";
+
+    try {
+        const endpoint =
+            `/v2/odata/166075/BaqSvc/UDNOV_FGHierarki03_1/Data` +
+            `?SelectedPeriode=${periode}` +
+            `&$orderby=Calculated_PartNum asc` +
+            `&$top=${take}` +
+            `&$skip=${skip}` +
+            `${filterQuery}`;
+
+        const res = await apiFetch(endpoint, {
+            method: "GET",
+            authHeader,
+            requireLicense: true,
+            apiMode: "epicor",
+            cache: "no-store",
+        });
 
         if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
             return {
                 success: false,
-                message: errorData?.ErrorMessage || `Error ${res.status}: ${res.statusText}`
+                error: `Gagal mengambil data: ${res.status} ${res.statusText}`,
             };
         }
 
-        const data: StockResponse = await res.json();
+        const result = (await res.json()) as ODataResponse;
 
-        return { success: true, data: data.value };
-
-    } catch (error) {
+        return { success: true, data: result.value };
+    } catch (error: unknown) {
         console.error("Fetch Stock Error:", error);
-        return { success: false, message: "Internal Server Error" };
+        let errorMessage = "Terjadi kesalahan server";
+        if (error instanceof Error) errorMessage = error.message;
+        return { success: false, error: errorMessage };
     }
 }
